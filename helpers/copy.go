@@ -5,29 +5,38 @@ import (
 	"sync"
 
 	"github.com/asciimoth/gonnect-vpn-example/logger"
+	"github.com/asciimoth/gonnect/helpers"
 	"github.com/asciimoth/gonnect/tun"
 )
 
 func CopyWithLog(
 	a, b tun.Tun,
-	aS, bS string,
 	offset int,
 	log logger.Logger,
 ) error {
+	an, err := a.Name()
+	if err != nil {
+		return err
+	}
+	bn, err := b.Name()
+	if err != nil {
+		return err
+	}
+
 	errCh := make(chan error, 2)
 	var wg sync.WaitGroup
 	wg.Go(func() {
 		defer a.Close() // nolint
 		errCh <- copyOneWay(
 			a, b, offset, log,
-			fmt.Sprintf("%s --IP-> %s", a, b),
+			fmt.Sprintf("%s --IP-> %s", an, bn),
 		)
 	})
 	wg.Go(func() {
 		defer b.Close() // nolint
 		errCh <- copyOneWay(
 			b, a, offset, log,
-			fmt.Sprintf("%s <-IP-- %s", a, b),
+			fmt.Sprintf("%s <-IP-- %s", an, bn),
 		)
 	})
 	wg.Wait()
@@ -35,7 +44,7 @@ func CopyWithLog(
 	_ = a.Close()
 	_ = b.Close()
 	for err := range errCh {
-		if err != nil {
+		if helpers.ClosedNetworkErrToNil(err) != nil {
 			return err
 		}
 	}
