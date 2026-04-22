@@ -1,9 +1,9 @@
 github.com/asciimoth/bufpool v0.3.0 h1:tQMop/kZ3eOLSorM9i0cqtOIpxWQUroGZ6oNk5DTnQc=
 github.com/asciimoth/bufpool v0.3.0/go.mod h1:JV6H4hpj2bCS5Svr0wNqR+XOZFOOkdXfNZxCjm/3QHw=
-github.com/asciimoth/gonnect v0.4.0 h1:xY8W0i1SXL9bf4BT6SS4SOw9otgv4KbvVqvvz7+FKng=
-github.com/asciimoth/gonnect v0.4.0/go.mod h1:XwXDVDjucVhOa/cifySEx+ij8veNKhtzUTnCdF1p+ug=
-github.com/asciimoth/gonnect-netstack v0.3.3 h1:H+tgcZqbosZkthZKWc/VcDlVH+U1Oa10ksDW/Fy9tC8=
-github.com/asciimoth/gonnect-netstack v0.3.3/go.mod h1:39v6HbC7MI75ZKgmITENMwu4Qc1eieUNyU8td7fnm0E=
+github.com/asciimoth/gonnect v0.6.0 h1:u+z3dQxwPI8bS36lWtxcTZrAbUErGI/6s4Gd7T6bzBc=
+github.com/asciimoth/gonnect v0.6.0/go.mod h1:XwXDVDjucVhOa/cifySEx+ij8veNKhtzUTnCdF1p+ug=
+github.com/asciimoth/gonnect-netstack v0.3.6 h1:509PB2qT1UPOwBxuPtLRTz9T5Ry/3ZdrX91ECzoC6rY=
+github.com/asciimoth/gonnect-netstack v0.3.6/go.mod h1:dtuNHxsFXd1UxWYpWWgVqlyDwnCWWWfu8rAib8YRUFc=
 github.com/coder/websocket v1.8.14 h1:9L0p0iKiNOibykf283eHkKUHHrpG7f65OE3BhhO7v9g=
 github.com/coder/websocket v1.8.14/go.mod h1:NX3SzP+inril6yawo5CQXx8+fk145lPDC6pumgx0mVg=
 github.com/google/btree v1.1.2 h1:xf4v41cLI2Z6FxbKm+8Bu+m8ifhj15JuZ9sa0jZCMUU=

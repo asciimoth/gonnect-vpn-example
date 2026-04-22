@@ -90,6 +90,14 @@ type Conn struct {
 	Ev    chan tun.Event
 }
 
+func (c *Conn) MWO() int {
+	return 0
+}
+
+func (c *Conn) MRO() int {
+	return 0
+}
+
 func (c *Conn) Read(
 	bufs [][]byte, sizes []int, offset int,
 ) (n int, err error) {
@@ -124,7 +132,7 @@ func (c *Conn) File() *os.File {
 }
 
 func (c *Conn) MTU() (int, error) {
-	return 1, nil
+	return 1500, nil
 }
 
 func (c *Conn) Name() (string, error) {

@@ -13,7 +13,7 @@ import (
 
 	"github.com/asciimoth/gonnect"
 	"github.com/asciimoth/gonnect-netstack/vtun"
-	"github.com/asciimoth/gonnect-vpn-example/helpers"
+
 	"github.com/asciimoth/gonnect-vpn-example/logger"
 	"github.com/asciimoth/gonnect-vpn-example/transport"
 	"github.com/asciimoth/gonnect/loopback"
@@ -69,8 +69,38 @@ func TestTransportTCPingPong(t *testing.T) {
 	}
 	defer tc.Close() //nolint
 	log.Print("Transport client connected")
-	wg.Go(func() {
-		_ = helpers.CopyWithLog(tunClient, tc, 0, log)
+
+	p2pClient := tun.NewP2P(nil)
+	defer p2pClient.Stop()
+	p2pClient.SetA(&tun.CallbackTUN{
+		Tun: tunClient,
+		OnWrite: func(n int, err error) {
+			if err != nil {
+				return
+			}
+			log.Println("vtun --IP->")
+		},
+		OnRead: func(n int, err error) {
+			if err != nil {
+				return
+			}
+			log.Println("vtun <-IP--")
+		},
+	})
+	p2pClient.SetB(&tun.CallbackTUN{
+		Tun: tc,
+		OnWrite: func(n int, err error) {
+			if err != nil {
+				return
+			}
+			log.Println("--IP-> transport")
+		},
+		OnRead: func(n int, err error) {
+			if err != nil {
+				return
+			}
+			log.Println("<-IP-- transport")
+		},
 	})
 
 	time.Sleep(time.Millisecond * 200)
@@ -82,7 +112,9 @@ func TestTransportTCPingPong(t *testing.T) {
 	defer listener.Close()
 
 	gt.RunTCPPingPongTest(t, listener, func(addr net.Addr) (net.Conn, error) {
-		return tunClient.Dial(ctx, addr.Network(), addr.String())
+		conn, err := tunClient.Dial(ctx, addr.Network(), addr.String())
+		log.Println("Vtun Dial", conn, err)
+		return conn, err
 	})
 
 	log.Print("Shutdown")
@@ -101,7 +133,7 @@ func server(
 	loop gonnect.Network,
 	wg *sync.WaitGroup,
 	log logger.Logger,
-	tun tun.Tun,
+	t tun.Tun,
 ) {
 	listener, err := loop.ListenTCP(
 		context.Background(),
@@ -121,9 +153,13 @@ func server(
 			panic(err)
 		}
 		log.Println("Accepted ws conn")
+		p2pServer := tun.NewP2P(nil)
+		p2pServer.SetA(t)
+		p2pServer.SetB(conn)
 		wg.Go(func() {
 			defer conn.Close() // nolint
-			_ = helpers.CopyWithLog(tun, conn, 0, log)
+			defer p2pServer.Stop()
+			<-ctx.Done()
 		})
 	})
 	server := &http.Server{
