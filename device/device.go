@@ -41,13 +41,13 @@ func wrap(dev tun.Tun, logger logger.Logger) tun.Tun {
 			if err != nil {
 				return
 			}
-			logger.Print("tun <-IP-- transport")
+			logger.Print("tun <-IP-- transport ", n, " packets")
 		},
 		OnWrite: func(n int, err error) {
 			if err != nil {
 				return
 			}
-			logger.Print("tun --IP-> transport")
+			logger.Print("tun --IP-> transport ", n, " packets")
 		},
 	}
 }
