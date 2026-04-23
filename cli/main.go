@@ -15,6 +15,7 @@ import (
 	"github.com/asciimoth/gonnect-vpn-example/helpers"
 	"github.com/asciimoth/gonnect-vpn-example/logger"
 	"github.com/asciimoth/gonnect-vpn-example/transport"
+	"github.com/asciimoth/gonnect-vpn-example/web"
 	"github.com/asciimoth/gonnect/tun"
 )
 
@@ -80,7 +81,7 @@ func server(
 	p2p.SetB(dev)
 
 	mux := http.NewServeMux()
-	// TODO: Serve web page on /
+	mux.Handle("/", web.Handler())
 	mux.HandleFunc("/ws-vpn", func(w http.ResponseWriter, r *http.Request) {
 		t, err := transport.Accept(ctx, w, r)
 		if err != nil {

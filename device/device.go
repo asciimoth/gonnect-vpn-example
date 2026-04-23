@@ -16,6 +16,13 @@ import (
 	"github.com/asciimoth/socksgo"
 )
 
+const (
+	defaultNativeAddr    = "10.200.1.2/24"
+	defaultNativeSubnet  = "10.200.1.0/24"
+	defaultVTunHTTPAddr  = "10.200.1.3"
+	defaultVTunSocksAddr = "10.200.1.4"
+)
+
 func IsPrivileged(name string) bool {
 	switch name {
 	case "vtun+http":
@@ -76,12 +83,11 @@ func TunFromCfg(
 }
 
 func defaultVTunAddr(cfg *cfg.Cfg) netip.Addr {
-	// Match the native defaults so each side owns a different subnet endpoint.
-	// Using the same address on both peers makes vtun treat the target as local.
-	if cfg != nil && cfg.Serve != "" {
-		return netip.MustParseAddr("10.200.1.2")
+	// Keep each backend on a unique default address inside the native subnet.
+	if cfg != nil && cfg.TunType == "vtun+http" {
+		return netip.MustParseAddr(defaultVTunHTTPAddr)
 	}
-	return netip.MustParseAddr("10.200.2.1")
+	return netip.MustParseAddr(defaultVTunSocksAddr)
 }
 
 func vtunFromCfg(cfg *cfg.Cfg) (*vtun.VTun, error) {

@@ -1,0 +1,18 @@
+# Build artifacts
+main.wasm
+app.wasm
+wasm_exec.js
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+pages/
+

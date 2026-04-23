@@ -60,6 +60,8 @@
           golangci-lint
           gopls
 
+          just
+
           typos
           commitizen
         ];

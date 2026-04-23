@@ -20,13 +20,19 @@ func TestVTunSocksReachesPeerHTTPWithDefaultAddresses(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
-	serverVTun, err := vtunFromCfg(&cfg.Cfg{Serve: "127.0.0.1:9090"})
+	serverVTun, err := vtunFromCfg(&cfg.Cfg{
+		Serve:   "127.0.0.1:9090",
+		TunType: "vtun+socks",
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer serverVTun.Close() //nolint:errcheck
 
-	clientVTun, err := vtunFromCfg(&cfg.Cfg{Connect: "ws://127.0.0.1:9090/ws-vpn"})
+	clientVTun, err := vtunFromCfg(&cfg.Cfg{
+		Connect: "ws://127.0.0.1:9090/ws-vpn",
+		TunType: "vtun+http",
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,10 +40,10 @@ func TestVTunSocksReachesPeerHTTPWithDefaultAddresses(t *testing.T) {
 
 	serverAddr := serverVTun.LocalAddrs()[0].String()
 	clientAddr := clientVTun.LocalAddrs()[0].String()
-	if serverAddr != "10.200.1.2" {
+	if serverAddr != "10.200.1.4" {
 		t.Fatalf("unexpected server vtun addr: %s", serverAddr)
 	}
-	if clientAddr != "10.200.2.1" {
+	if clientAddr != "10.200.1.3" {
 		t.Fatalf("unexpected client vtun addr: %s", clientAddr)
 	}
 

@@ -26,15 +26,9 @@ func wrapEOF(err error) error {
 }
 
 func Dial(ctx context.Context, url string, dialer gonnect.Dial) (*Conn, error) {
-	var opts *websocket.DialOptions
-	if dialer != nil {
-		opts = &websocket.DialOptions{
-			HTTPClient: &http.Client{
-				Transport: &http.Transport{
-					DialContext: dialer,
-				},
-			},
-		}
+	opts, err := dialOptionsFromDialer(dialer)
+	if err != nil {
+		return nil, err
 	}
 	ws, resp, err := websocket.Dial(ctx, url, opts)
 	if err != nil {

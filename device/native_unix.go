@@ -4,6 +4,7 @@ package device
 
 import (
 	"context"
+	"net/netip"
 	"os/exec"
 	"sync"
 
@@ -23,11 +24,11 @@ func nativeFromCfg(
 	if cfg.TunName != "" {
 		name = cfg.TunName
 	}
-	addr := "10.200.1.2/24"
+	addr := defaultNativeAddr
 	if cfg.TunAddr != "" {
 		addr = cfg.TunAddr
 	}
-	subnet := "10.200.2.0/24"
+	subnet := defaultNativeSubnet
 	if cfg.TunSubnet != "" {
 		subnet = cfg.TunSubnet
 	}
@@ -51,14 +52,18 @@ func nativeFromCfg(
 	cmds := [][]string{
 		{"ip", "link", "set", "dev", actualName, "up"},
 		{"ip", "-4", "addr", "add", addr, "dev", actualName},
-		{"ip", "-4", "route", "add", subnet, "dev", actualName},
+	}
+	if shouldAddNativeRoute(addr, subnet) {
+		cmds = append(cmds, []string{"ip", "-4", "route", "add", subnet, "dev", actualName})
+	} else {
+		logger.Printf("skipping explicit route for %s; kernel installs it from %s", subnet, addr)
 	}
 
 	for _, cmd := range cmds {
 		logger.Printf("running: %v", cmd)
 		out, err := exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
 		if err != nil {
-			logger.Panicln("command %v failed: %v\noutput: %s", cmd, err, out)
+			logger.Panicln("command %v failed: %v\noutput: %s", cmd, err, string(out))
 			_ = nativeTun.Close()
 			return nil, err
 		}
@@ -67,4 +72,16 @@ func nativeFromCfg(
 	logger.Printf("interface %s configured with %s", actualName, addr)
 
 	return nativeTun, nil
+}
+
+func shouldAddNativeRoute(addr, subnet string) bool {
+	addrPrefix, err := netip.ParsePrefix(addr)
+	if err != nil {
+		return true
+	}
+	subnetPrefix, err := netip.ParsePrefix(subnet)
+	if err != nil {
+		return true
+	}
+	return addrPrefix.Masked() != subnetPrefix.Masked()
 }
