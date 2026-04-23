@@ -23,5 +23,14 @@ serve: build-cli
     @echo "Open http://127.0.0.1:9090 in your browser"
     ./vpn --serve 127.0.0.1:9090 --tun vtun+http
 
+# Prepare for GitHub Pages
+gh-pages: build-web
+    @echo "Preparing for GitHub Pages..."
+    @mkdir -p ./pages
+    @cp -f ./web/index.html ./web/main.js ./web/app.wasm ./web/wasm_exec.js ./pages
+    @touch ./pages/.nojekyll
+    @echo "GitHub Pages ready in webdemo/pages"
+
 clean:
     rm -f vpn web/app.wasm web/wasm_exec.js
+
