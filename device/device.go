@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/netip"
 	"sync"
@@ -12,6 +13,7 @@ import (
 	"github.com/asciimoth/gonnect-vpn-example/cfg"
 	"github.com/asciimoth/gonnect-vpn-example/logger"
 	"github.com/asciimoth/gonnect/tun"
+	"github.com/asciimoth/socksgo"
 )
 
 func IsPrivileged(name string) bool {
@@ -56,6 +58,12 @@ func TunFromCfg(
 			return nil, err
 		}
 		return wrap(dev, logger), nil
+	case "vtun+socks":
+		dev, err := vtunSocksFromCfg(ctx, cfg, wg, logger)
+		if err != nil {
+			return nil, err
+		}
+		return wrap(dev, logger), nil
 	case "native":
 		dev, err := nativeFromCfg(ctx, cfg, wg, logger)
 		if err != nil {
@@ -67,9 +75,18 @@ func TunFromCfg(
 	}
 }
 
+func defaultVTunAddr(cfg *cfg.Cfg) netip.Addr {
+	// Match the native defaults so each side owns a different subnet endpoint.
+	// Using the same address on both peers makes vtun treat the target as local.
+	if cfg != nil && cfg.Serve != "" {
+		return netip.MustParseAddr("10.200.1.2")
+	}
+	return netip.MustParseAddr("10.200.2.1")
+}
+
 func vtunFromCfg(cfg *cfg.Cfg) (*vtun.VTun, error) {
 	laddrs := []netip.Addr{
-		netip.MustParseAddr("10.200.2.1"),
+		defaultVTunAddr(cfg),
 	}
 	if cfg.TunAddr != "" {
 		laddr, err := netip.ParseAddr(cfg.TunAddr)
@@ -87,6 +104,72 @@ func vtunFromCfg(cfg *cfg.Cfg) (*vtun.VTun, error) {
 		return nil, err
 	}
 	return dev, nil
+}
+
+func vtunSocksFromCfg(
+	ctx context.Context,
+	cfg *cfg.Cfg,
+	wg *sync.WaitGroup,
+	logger logger.Logger,
+) (tun.Tun, error) {
+	vtun, err := vtunFromCfg(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	addr := "127.0.0.1:1080"
+	if cfg.TunSocksAddr != "" {
+		addr = cfg.TunSocksAddr
+	}
+
+	server := &socksgo.Server{
+		// TODO: Cmd logger
+		Dialer:         vtun.Dial,
+		Listener:       vtun.Listen,
+		PacketDialer:   vtun.PacketDial,
+		PacketListener: vtun.ListenPacket,
+	}
+
+	listener, err := (&net.ListenConfig{}).Listen(ctx, "tcp", addr)
+	if err != nil {
+		_ = vtun.Close()
+		return nil, err
+	}
+	logger.Printf("local socks over vtun server listening on %s", addr)
+	wg.Go(func() {
+		<-ctx.Done()
+		logger.Println("closing socks over vtun")
+		_ = listener.Close()
+	})
+
+	wg.Go(func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				// Listener was closed (by context cancellation or error)
+				return
+			}
+
+			wg.Go(func() {
+				defer func() { _ = conn.Close() }()
+				logger.Printf("socks connection from %s", conn.RemoteAddr())
+				if err := server.Accept(ctx, conn, false); err != nil {
+					logger.Printf(
+						"socks connection from %s closed with error: %v",
+						conn.RemoteAddr(),
+						err,
+					)
+				} else {
+					logger.Printf(
+						"socks connection from %s closed",
+						conn.RemoteAddr(),
+					)
+				}
+			})
+		}
+	})
+
+	return vtun, nil
 }
 
 func vtunHttpFromCfg(
@@ -140,9 +223,9 @@ func vtunHttpFromCfg(
 			logger.Printf("http on vtun server sopped: %s", err)
 		}
 	})
-	go func() {
+	wg.Go(func() {
 		<-ctx.Done()
 		server.Close()
-	}()
+	})
 	return vtun, nil
 }
