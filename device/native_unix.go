@@ -4,7 +4,6 @@ package device
 
 import (
 	"context"
-	"net/netip"
 	"os/exec"
 	"sync"
 
@@ -72,16 +71,4 @@ func nativeFromCfg(
 	logger.Printf("interface %s configured with %s", actualName, addr)
 
 	return nativeTun, nil
-}
-
-func shouldAddNativeRoute(addr, subnet string) bool {
-	addrPrefix, err := netip.ParsePrefix(addr)
-	if err != nil {
-		return true
-	}
-	subnetPrefix, err := netip.ParsePrefix(subnet)
-	if err != nil {
-		return true
-	}
-	return addrPrefix.Masked() != subnetPrefix.Masked()
 }
