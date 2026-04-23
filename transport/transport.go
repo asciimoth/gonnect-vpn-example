@@ -54,7 +54,11 @@ func Accept(
 	w http.ResponseWriter,
 	r *http.Request,
 ) (*Conn, error) {
-	ws, err := websocket.Accept(w, r, nil)
+	ws, err := websocket.Accept(w, r, &websocket.AcceptOptions{
+		// This repository is an example app and intentionally allows browser
+		// clients served from other origins, such as GitHub Pages.
+		InsecureSkipVerify: true,
+	})
 	if err != nil {
 		return nil, err
 	}
