@@ -4,7 +4,7 @@
 
 # gonnect-vpn-example
 
-This repository demonstrates a simple peer-to-peer VPN built on top of the
+This repository demonstrates a simple point-to-point VPN built on top of the
 [`gonnect`](https://github.com/asciimoth/gonnect) ecosystem.
 
 VPN nodes talk over WebSocket transport. A node can run as a server or a
@@ -151,4 +151,21 @@ just install-android-apk
 - Some backends require elevated privileges, especially `native`.
 - The Android `VpnService` path is implemented for the example app, but it is
   still intentionally simpler than a production mobile VPN.
+
+## License
+Files in this repository are distributed under the CC0 license.  
+
+<p xmlns:dct="http://purl.org/dc/terms/">
+  <a rel="license"
+     href="http://creativecommons.org/publicdomain/zero/1.0/">
+    <img src="http://i.creativecommons.org/p/zero/1.0/88x31.png" style="border-style: none;" alt="CC0" />
+  </a>
+  <br />
+  To the extent possible under law,
+  <a rel="dct:publisher"
+     href="https://github.com/asciimoth">
+    <span property="dct:title">ASCIIMoth</span></a>
+  has waived all copyright and related or neighboring rights to
+  <span property="dct:title">gonnect-vpn-example</span>.
+</p>
 
