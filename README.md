@@ -62,6 +62,9 @@ just serve
 That starts a local demo server on `http://127.0.0.1:9090`.
 
 ### Web Client
+<p align="center">
+<img src="./media/web.png" width="500" align="center">
+</p>
 
 The web client lives in `web/` and runs as a [WebAssembly](https://webassembly.org/) app in the browser.
 
@@ -82,6 +85,9 @@ Then open the server page from `just serve`, or publish the static assets from
 There is also a [web client instance hosted on GitHub pages](https://asciimoth.github.io/gonnect-vpn-example/).
 
 ### Desktop GUI
+<p align="center">
+<img src="./media/gui.png" width="500" align="center">
+</p>
 
 The desktop GUI lives in `gui/` and is built with [Gio](https://gioui.org/).
 
@@ -100,6 +106,9 @@ just run-gui
 ```
 
 ### Android
+<p align="center">
+<img src="./media/android.jpg" height="500" align="center">
+</p>
 
 The Android client lives in `android/` with a native Kotlin UI and gomobile
 bindings into the Go client code.
