@@ -35,6 +35,8 @@ go.work.sum
 /.pre-commit-config.yaml
 /.direnv
 /.gocache
+/.codex
+/.gradle
 
 vpn
 vpn.exe
@@ -45,4 +47,27 @@ web/app.wasm
 web/wasm_exec.js
 web/pages
 pages
+
+build/
+android/.gradle/
+android/gradle/
+android/.kotlin/
+android/app/build/
+android/build/
+android/local.properties
+
+.idea
+android/.idea
+
+*.log
+android/*.log
+
+# Package Files #
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
 

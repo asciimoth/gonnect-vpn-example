@@ -17,8 +17,22 @@ build-web:
 build-cli: build-web
     go build -o {{cli_bin}} ./cli
 
-build-gui:
+build-gui: build-web
     go build -tags novulkan -o gonnect-vpn-gui ./gui
+
+build-android-aar:
+    ./scripts/build-android-mobilelib-aar.sh
+
+build-android-apk: build-android-aar
+    mkdir -p build
+    cd android && ./gradlew --no-daemon assembleDebug
+    cp -f android/app/build/outputs/apk/debug/app-debug.apk build/gonnect-vpn-android.apk
+
+install-android-apk: build-android-apk
+    adb install -r build/gonnect-vpn-android.apk
+
+uninstall-android-apk:
+    adb uninstall io.github.asciimoth.gonnectvpnexample
 
 run-gui: build-gui
     ./gonnect-vpn-gui
@@ -39,4 +53,7 @@ gh-pages: build-web
     @echo "GitHub Pages ready in webdemo/pages"
 
 clean:
-    rm -f {{cli_bin}} web/app.wasm web/wasm_exec.js
+    chmod -R u+w build android/.gradle android/build android/app/build 2>/dev/null || true
+    rm -rf build
+    rm -rf android/.gradle android/build android/app/build
+    rm -f {{cli_bin}} gonnect-vpn-gui web/app.wasm web/wasm_exec.js

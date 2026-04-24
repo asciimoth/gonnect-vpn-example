@@ -22,6 +22,7 @@ import (
 	"gioui.org/widget/material"
 
 	"github.com/asciimoth/gonnect-vpn-example/cfg"
+	"github.com/asciimoth/gonnect-vpn-example/clientcore"
 	"github.com/asciimoth/gonnect-vpn-example/device"
 	"github.com/asciimoth/gonnect-vpn-example/helpers"
 	"github.com/asciimoth/gonnect-vpn-example/logger"
@@ -31,10 +32,11 @@ import (
 func main() {
 	go func() {
 		w := new(app.Window)
-		w.Option(
+		opts := []app.Option{
 			app.Title("Gonnect VPN Example"),
 			app.Size(unit.Dp(1180), unit.Dp(860)),
-		)
+		}
+		w.Option(opts...)
 		ui := newGUI(w)
 		if err := ui.run(); err != nil {
 			log.Print(err)
@@ -42,6 +44,11 @@ func main() {
 		os.Exit(0)
 	}()
 	app.Main()
+}
+
+type sessionHandle interface {
+	Stop()
+	Wait()
 }
 
 type gui struct {
@@ -59,7 +66,7 @@ type gui struct {
 	stdoutLogs *log.Logger
 
 	session  sessionHandle
-	vtun     *vtunClientSession
+	vtun     *clientcore.VTunClientSession
 	starting bool
 	stopping bool
 	status   string
@@ -99,7 +106,7 @@ type gui struct {
 type uiUpdate struct {
 	err     error
 	session sessionHandle
-	vtun    *vtunClientSession
+	vtun    *clientcore.VTunClientSession
 	stopped bool
 	status  string
 	result  string
@@ -157,6 +164,7 @@ func newGUI(window *app.Window) *gui {
 	ui.pingTarget.SetText("10.200.1.3")
 	ui.tunSocksAddr.SetText("127.0.0.1:1080")
 	ui.logs.add("INFO", "gui ready")
+	window.Invalidate()
 
 	return ui
 }
@@ -173,6 +181,7 @@ func (u *gui) run() error {
 	for {
 		switch e := u.window.Event().(type) {
 		case app.DestroyEvent:
+			log.Printf("gio destroy event: %v", e.Err)
 			return e.Err
 		case app.FrameEvent:
 			gtx := app.NewContext(&u.ops, e)
@@ -221,7 +230,7 @@ func (u *gui) startSession() {
 
 	if u.mode.Value == "client" && u.tunType.Value == "vtun" {
 		go func() {
-			session, err := newVTunClientSession(u.rootCtx, conf, u.logger)
+			session, err := clientcore.NewVTunClientSession(u.rootCtx, conf, u.logger)
 			if err != nil {
 				u.enqueue(uiUpdate{
 					err:    err,
@@ -778,7 +787,7 @@ func (u *gui) runVTunRequest() {
 	headersText := u.headers.Text()
 	bodyText := u.body.Text()
 
-	go func(session *vtunClientSession) {
+	go func(session *clientcore.VTunClientSession) {
 		result, err := session.DoRequest(
 			context.Background(),
 			method,
@@ -813,7 +822,7 @@ func (u *gui) runVTunPing() {
 	u.logs.add("INFO", "running vtun ping")
 	target := strings.TrimSpace(u.pingTarget.Text())
 
-	go func(session *vtunClientSession) {
+	go func(session *clientcore.VTunClientSession) {
 		result, err := session.Ping(context.Background(), target)
 		if err != nil {
 			u.logs.add("ERROR", err.Error())

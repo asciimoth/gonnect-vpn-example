@@ -66,8 +66,8 @@
           export JAVA_HOME=${pkgs.openjdk17_headless}
           export ANDROID_HOME=${androidPkgs.androidsdk}/libexec/android-sdk
           export ANDROID_SDK_ROOT=$ANDROID_HOME
-          export ANDROID_NDK_HOME=${androidPkgs.ndk-bundle}
-          export ANDROID_NDK_ROOT=${androidPkgs.ndk-bundle}
+          export ANDROID_NDK_HOME=$ANDROID_HOME/ndk/29.0.14206865
+          export ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/29.0.14206865
         '';
         nativeBuildInputs = with pkgs; [
           pkg-config

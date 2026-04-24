@@ -1,4 +1,4 @@
-package main
+package clientcore
 
 import (
 	"bytes"
@@ -23,14 +23,9 @@ import (
 	"golang.org/x/net/ipv6"
 )
 
-const defaultGUIVTunAddr = "10.200.1.5"
+const DefaultVTunAddr = "10.200.1.5"
 
-type sessionHandle interface {
-	Stop()
-	Wait()
-}
-
-type vtunClientSession struct {
+type VTunClientSession struct {
 	logger logger.Logger
 
 	cancel context.CancelFunc
@@ -45,11 +40,11 @@ type vtunClientSession struct {
 	pingSeq atomic.Uint32
 }
 
-func newVTunClientSession(
+func NewVTunClientSession(
 	parent context.Context,
 	conf *cfg.Cfg,
 	log logger.Logger,
-) (*vtunClientSession, error) {
+) (*VTunClientSession, error) {
 	if conf == nil {
 		return nil, fmt.Errorf("config is required")
 	}
@@ -59,7 +54,7 @@ func newVTunClientSession(
 
 	addrText := strings.TrimSpace(conf.TunAddr)
 	if addrText == "" {
-		addrText = defaultGUIVTunAddr
+		addrText = DefaultVTunAddr
 	}
 	addr, err := netip.ParseAddr(addrText)
 	if err != nil {
@@ -92,7 +87,7 @@ func newVTunClientSession(
 	p2p.SetA(conn)
 	p2p.SetB(dev)
 
-	session := &vtunClientSession{
+	session := &VTunClientSession{
 		logger: log,
 		cancel: cancel,
 		done:   make(chan struct{}),
@@ -117,7 +112,7 @@ func newVTunClientSession(
 	return session, nil
 }
 
-func (s *vtunClientSession) Stop() {
+func (s *VTunClientSession) Stop() {
 	if s == nil {
 		return
 	}
@@ -126,14 +121,14 @@ func (s *vtunClientSession) Stop() {
 	})
 }
 
-func (s *vtunClientSession) Wait() {
+func (s *VTunClientSession) Wait() {
 	if s == nil {
 		return
 	}
 	<-s.done
 }
 
-func (s *vtunClientSession) closeResources() {
+func (s *VTunClientSession) closeResources() {
 	if s.p2p != nil {
 		s.p2p.Stop()
 	}
@@ -145,7 +140,7 @@ func (s *vtunClientSession) closeResources() {
 	}
 }
 
-func (s *vtunClientSession) DoRequest(
+func (s *VTunClientSession) DoRequest(
 	ctx context.Context,
 	method string,
 	targetURL string,
@@ -224,7 +219,7 @@ func formatHTTPResponse(resp *http.Response, body []byte) string {
 	return result.String()
 }
 
-func (s *vtunClientSession) Ping(ctx context.Context, target string) (string, error) {
+func (s *VTunClientSession) Ping(ctx context.Context, target string) (string, error) {
 	if s == nil || s.vtun == nil {
 		return "", fmt.Errorf("vtun client is not connected")
 	}
@@ -242,7 +237,7 @@ func (s *vtunClientSession) Ping(ctx context.Context, target string) (string, er
 
 	seq := int(s.pingSeq.Add(1))
 	id := os.Getpid() & 0xffff
-	payload := []byte("gonnect-gui-ping")
+	payload := []byte("gonnect-vtun-ping")
 
 	proto := 1
 	var msgType icmp.Type = ipv4.ICMPTypeEcho
@@ -267,54 +262,43 @@ func (s *vtunClientSession) Ping(ctx context.Context, target string) (string, er
 		return "", err
 	}
 
-	deadline := time.Now().Add(3 * time.Second)
-	if dl, ok := ctx.Deadline(); ok && dl.Before(deadline) {
-		deadline = dl
-	}
-	if err := conn.SetDeadline(deadline); err != nil {
+	started := time.Now()
+	if deadline, ok := ctx.Deadline(); ok {
+		if err := conn.SetDeadline(deadline); err != nil {
+			return "", err
+		}
+	} else if err := conn.SetDeadline(started.Add(5 * time.Second)); err != nil {
 		return "", err
 	}
 
-	start := time.Now()
 	if _, err := conn.Write(packet); err != nil {
 		return "", err
 	}
 
-	buf := make([]byte, 1500)
-	for {
-		n, err := conn.Read(buf)
-		if err != nil {
-			return "", err
-		}
-
-		reply, err := icmp.ParseMessage(proto, buf[:n])
-		if err != nil {
-			return "", err
-		}
-		if reply.Type != replyType {
-			s.logger.Printf("vtun ping ignored icmp packet from %s: type=%v", addr, reply.Type)
-			continue
-		}
-
-		echo, ok := reply.Body.(*icmp.Echo)
-		if !ok {
-			s.logger.Printf("vtun ping ignored icmp packet from %s: body=%T", addr, reply.Body)
-			continue
-		}
-		if echo.ID != id || echo.Seq != seq {
-			s.logger.Printf(
-				"vtun ping ignored mismatched echo reply from %s: id=%d seq=%d expected_id=%d expected_seq=%d",
-				addr,
-				echo.ID,
-				echo.Seq,
-				id,
-				seq,
-			)
-			continue
-		}
-
-		rtt := time.Since(start).Round(time.Millisecond)
-		s.logger.Printf("vtun ping reply: %s seq=%d time=%s", addr, seq, rtt)
-		return fmt.Sprintf("Reply from %s: seq=%d bytes=%d time=%s", addr, seq, n, rtt), nil
+	replyBuf := make([]byte, 1500)
+	n, err := conn.Read(replyBuf)
+	if err != nil {
+		return "", err
 	}
+
+	reply, err := icmp.ParseMessage(proto, replyBuf[:n])
+	if err != nil {
+		return "", err
+	}
+	if reply.Type != replyType {
+		return "", fmt.Errorf("unexpected ping reply type %v", reply.Type)
+	}
+
+	echo, ok := reply.Body.(*icmp.Echo)
+	if !ok {
+		return "", fmt.Errorf("unexpected ping reply body %T", reply.Body)
+	}
+	if echo.ID != id || echo.Seq != seq {
+		return "", fmt.Errorf("unexpected ping echo reply id=%d seq=%d", echo.ID, echo.Seq)
+	}
+
+	rtt := time.Since(started)
+	result := fmt.Sprintf("%d bytes from %s: seq=%d time=%s", len(echo.Data), addr, echo.Seq, rtt.Round(time.Millisecond))
+	s.logger.Printf("vtun ping finished: %s", result)
+	return result, nil
 }

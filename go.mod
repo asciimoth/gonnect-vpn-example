@@ -10,7 +10,7 @@ require (
 	github.com/asciimoth/socksgo v0.2.4
 	github.com/asciimoth/tuntap v0.1.7
 	github.com/coder/websocket v1.8.14
-	golang.org/x/net v0.44.0
+	golang.org/x/net v0.46.0
 	golang.org/x/sys v0.42.0
 )
 
@@ -22,10 +22,16 @@ require (
 	github.com/google/btree v1.1.2 // indirect
 	github.com/xtaci/smux v1.5.44 // indirect
 	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0 // indirect
-	golang.org/x/exp/shiny v0.0.0-20250408133849-7e4ce0ab07d0 // indirect
-	golang.org/x/image v0.26.0 // indirect
-	golang.org/x/text v0.29.0 // indirect
+	golang.org/x/exp/shiny v0.0.0-20251002181428-27f1f14c8bb9 // indirect
+	golang.org/x/image v0.32.0 // indirect
+	golang.org/x/mobile v0.0.0-20251009145931-8baca8bf4eeb // indirect
+	golang.org/x/mod v0.29.0 // indirect
+	golang.org/x/sync v0.17.0 // indirect
+	golang.org/x/text v0.30.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
+	golang.org/x/tools v0.38.0 // indirect
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
 	gvisor.dev/gvisor v0.0.0-20260325202830-7644cf3a343c // indirect
 )
+
+tool golang.org/x/mobile/cmd/gobind
