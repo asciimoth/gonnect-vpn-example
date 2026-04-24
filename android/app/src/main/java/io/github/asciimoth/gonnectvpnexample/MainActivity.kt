@@ -1,133 +1,141 @@
 package io.github.asciimoth.gonnectvpnexample
 
+import android.app.Activity
+import android.content.Intent
+import android.net.VpnService
 import android.os.Bundle
 import android.text.method.ScrollingMovementMethod
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import io.github.asciimoth.gonnectvpnexample.databinding.ActivityMainBinding
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import mobilelib.Client
-import mobilelib.Mobilelib
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
-    private lateinit var client: Client
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private lateinit var viewModel: MainViewModel
+    private val vpnPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            startNativeVpn()
+        } else {
+            viewModel.markNativeVpnPermissionDenied()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        viewModel = ViewModelProvider(this)[MainViewModel::class.java]
 
-        client = Mobilelib.newClient()
         binding.resultText.movementMethod = ScrollingMovementMethod()
         binding.logText.movementMethod = ScrollingMovementMethod()
-
-        binding.connectUrlInput.setText("ws://10.0.2.2:8080/ws-vpn")
-        binding.tunAddrInput.setText("10.200.1.5")
-        binding.tunNameInput.setText("android-vtun")
-        binding.httpMethodInput.setText("GET")
-        binding.httpTargetInput.setText("http://10.200.1.3/")
-        binding.pingTargetInput.setText("10.200.1.3")
-
-        val clearError = {
-            binding.errorText.isVisible = false
-            binding.errorText.text = ""
-        }
-        listOf(
-            binding.connectUrlInput,
-            binding.tunAddrInput,
-            binding.tunNameInput,
-            binding.httpMethodInput,
-            binding.httpTargetInput,
-            binding.httpHeadersInput,
-            binding.httpBodyInput,
-            binding.pingTargetInput,
-        ).forEach { view ->
-            view.doAfterTextChanged { clearError() }
-        }
+        binding.nativeVpnLogText.movementMethod = ScrollingMovementMethod()
+        bindInputs()
 
         binding.connectButton.setOnClickListener {
-            runAction {
-                client.connect(
-                    binding.connectUrlInput.text.toString(),
-                    binding.tunAddrInput.text.toString(),
-                    binding.tunNameInput.text.toString(),
-                )
-                "Connected"
-            }
+            viewModel.connect()
         }
 
         binding.disconnectButton.setOnClickListener {
-            runAction {
-                client.disconnect()
-                "Disconnected"
-            }
+            viewModel.disconnect()
         }
 
         binding.requestButton.setOnClickListener {
-            runAction {
-                client.request(
-                    binding.httpMethodInput.text.toString(),
-                    binding.httpTargetInput.text.toString(),
-                    binding.httpHeadersInput.text.toString(),
-                    binding.httpBodyInput.text.toString(),
-                )
-            }
+            viewModel.request()
         }
 
         binding.pingButton.setOnClickListener {
-            runAction {
-                client.ping(binding.pingTargetInput.text.toString())
+            viewModel.ping()
+        }
+
+        binding.startNativeVpnButton.setOnClickListener {
+            val prepareIntent = VpnService.prepare(this)
+            if (prepareIntent != null) {
+                vpnPermissionLauncher.launch(prepareIntent)
+            } else {
+                startNativeVpn()
             }
         }
 
-        refreshClientState()
-    }
+        binding.stopNativeVpnButton.setOnClickListener {
+            AndroidVpnRuntime.stop(applicationContext)
+        }
 
-    override fun onDestroy() {
-        runCatching { client.disconnect() }
-        scope.cancel()
-        super.onDestroy()
-    }
-
-    private fun runAction(action: suspend () -> String) {
-        setBusy(true)
-        scope.launch {
-            try {
-                val result = withContext(Dispatchers.IO) { action() }
-                binding.resultText.text = result
-                binding.errorText.isVisible = false
-            } catch (err: Throwable) {
-                binding.errorText.text = err.message ?: err.toString()
-                binding.errorText.isVisible = true
-                Toast.makeText(this@MainActivity, "Action failed", Toast.LENGTH_SHORT).show()
-            } finally {
-                refreshClientState()
-                setBusy(false)
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState.collect { render(it) }
             }
         }
     }
 
-    private fun refreshClientState() {
-        binding.statusText.text = client.status()
-        binding.logText.text = client.logs()
+    private fun bindInputs() {
+        binding.connectUrlInput.doAfterTextChanged { viewModel.updateConnectUrl(it?.toString().orEmpty()) }
+        binding.tunAddrInput.doAfterTextChanged { viewModel.updateTunAddr(it?.toString().orEmpty()) }
+        binding.tunSubnetInput.doAfterTextChanged { viewModel.updateTunSubnet(it?.toString().orEmpty()) }
+        binding.tunNameInput.doAfterTextChanged { viewModel.updateTunName(it?.toString().orEmpty()) }
+        binding.httpMethodInput.doAfterTextChanged { viewModel.updateHttpMethod(it?.toString().orEmpty()) }
+        binding.httpTargetInput.doAfterTextChanged { viewModel.updateHttpTarget(it?.toString().orEmpty()) }
+        binding.httpHeadersInput.doAfterTextChanged { viewModel.updateHttpHeaders(it?.toString().orEmpty()) }
+        binding.httpBodyInput.doAfterTextChanged { viewModel.updateHttpBody(it?.toString().orEmpty()) }
+        binding.pingTargetInput.doAfterTextChanged { viewModel.updatePingTarget(it?.toString().orEmpty()) }
     }
 
-    private fun setBusy(busy: Boolean) {
-        binding.progressBar.isVisible = busy
-        listOf(
-            binding.connectButton,
-            binding.disconnectButton,
-            binding.requestButton,
-            binding.pingButton,
-        ).forEach { it.isEnabled = !busy }
+    private fun render(state: MainUiState) {
+        applyTextIfChanged(binding.connectUrlInput, state.connectUrl)
+        applyTextIfChanged(binding.tunAddrInput, state.tunAddr)
+        applyTextIfChanged(binding.tunSubnetInput, state.tunSubnet)
+        applyTextIfChanged(binding.tunNameInput, state.tunName)
+        applyTextIfChanged(binding.httpMethodInput, state.httpMethod)
+        applyTextIfChanged(binding.httpTargetInput, state.httpTarget)
+        applyTextIfChanged(binding.httpHeadersInput, state.httpHeaders)
+        applyTextIfChanged(binding.httpBodyInput, state.httpBody)
+        applyTextIfChanged(binding.pingTargetInput, state.pingTarget)
+
+        binding.statusText.text = state.status
+        binding.logText.text = state.logs
+        binding.resultText.text = state.result
+        binding.errorText.text = state.error
+        binding.errorText.isVisible = state.error.isNotBlank()
+        binding.progressBar.isVisible = state.busy
+        binding.nativeVpnStatusText.text = state.nativeVpnStatus
+        binding.nativeVpnLogText.text = state.nativeVpnLogs
+        binding.nativeVpnErrorText.text = state.nativeVpnError
+        binding.nativeVpnErrorText.isVisible = state.nativeVpnError.isNotBlank()
+
+        val connected = state.status == "connected"
+        binding.connectButton.isEnabled = !state.busy && !connected
+        binding.disconnectButton.isEnabled = !state.busy && connected
+        binding.requestButton.isEnabled = !state.busy && connected
+        binding.pingButton.isEnabled = !state.busy && connected
+        val nativeConnected = state.nativeVpnStatus == "connected"
+        binding.startNativeVpnButton.isEnabled = !state.nativeVpnBusy && !nativeConnected
+        binding.stopNativeVpnButton.isEnabled = !state.nativeVpnBusy && nativeConnected
+    }
+
+    private fun applyTextIfChanged(view: android.widget.EditText, value: String) {
+        if (view.text.toString() == value) {
+            return
+        }
+        view.setText(value)
+        view.setSelection(value.length)
+    }
+
+    private fun startNativeVpn() {
+        val state = viewModel.uiState.value
+        AndroidVpnRuntime.start(
+            applicationContext,
+            state.connectUrl,
+            state.tunAddr,
+            state.tunSubnet,
+            state.tunName,
+        )
     }
 }

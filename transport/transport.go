@@ -26,7 +26,13 @@ func wrapEOF(err error) error {
 }
 
 func Dial(ctx context.Context, url string, dialer gonnect.Dial) (*Conn, error) {
-	opts, err := dialOptionsFromDialer(dialer)
+	return DialWithConfig(ctx, url, DialConfig{
+		Dialer: dialer,
+	})
+}
+
+func DialWithConfig(ctx context.Context, url string, cfg DialConfig) (*Conn, error) {
+	opts, err := dialOptionsFromConfig(cfg)
 	if err != nil {
 		return nil, err
 	}

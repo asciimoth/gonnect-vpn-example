@@ -293,8 +293,10 @@ func (s *VTunClientSession) Ping(ctx context.Context, target string) (string, er
 	if !ok {
 		return "", fmt.Errorf("unexpected ping reply body %T", reply.Body)
 	}
-	if echo.ID != id || echo.Seq != seq {
-		return "", fmt.Errorf("unexpected ping echo reply id=%d seq=%d", echo.ID, echo.Seq)
+	// The userspace vtun stack may rewrite the ICMP identifier before the
+	// reply is delivered back to the client, so only validate the echoed data.
+	if !bytes.Equal(echo.Data, payload) {
+		return "", fmt.Errorf("unexpected ping echo reply payload")
 	}
 
 	rtt := time.Since(started)

@@ -163,15 +163,7 @@ func (c *Client) setStatusf(format string, args ...any) {
 }
 
 func (c *Client) appendLogLocked(line string) {
-	line = strings.TrimSpace(line)
-	if line == "" {
-		return
-	}
-
-	c.logs = append(c.logs, line)
-	if len(c.logs) > maxLogLines {
-		c.logs = append([]string(nil), c.logs[len(c.logs)-maxLogLines:]...)
-	}
+	appendLogLocked(&c.logs, line)
 }
 
 type clientLogger struct {
@@ -221,4 +213,16 @@ func (l clientLogger) log(line string) {
 	l.client.mu.Lock()
 	defer l.client.mu.Unlock()
 	l.client.appendLogLocked(line)
+}
+
+func appendLogLocked(logs *[]string, line string) {
+	line = strings.TrimSpace(line)
+	if line == "" || logs == nil {
+		return
+	}
+
+	*logs = append(*logs, line)
+	if len(*logs) > maxLogLines {
+		*logs = append([]string(nil), (*logs)[len(*logs)-maxLogLines:]...)
+	}
 }

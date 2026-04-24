@@ -47,6 +47,14 @@
             android:singleLine="true" />
 
         <EditText
+            android:id="@+id/tunSubnetInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/tun_subnet_hint"
+            android:inputType="text"
+            android:singleLine="true" />
+
+        <EditText
             android:id="@+id/tunNameInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -75,6 +83,70 @@
                 android:layout_weight="1"
                 android:text="@string/disconnect_button" />
         </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:text="@string/native_vpn_label"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/native_vpn_note" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/startNativeVpnButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/start_native_vpn_button" />
+
+            <Button
+                android:id="@+id/stopNativeVpnButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="@string/stop_native_vpn_button" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/nativeVpnStatusText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="#E8EFE4"
+            android:padding="8dp"
+            android:textAppearance="@style/TextAppearance.AppCompat.Body1" />
+
+        <TextView
+            android:id="@+id/nativeVpnErrorText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="#B00020"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/nativeVpnLogText"
+            android:layout_width="match_parent"
+            android:layout_height="120dp"
+            android:layout_marginTop="8dp"
+            android:background="#EDF6FA"
+            android:fontFamily="monospace"
+            android:gravity="top|start"
+            android:padding="10dp"
+            android:scrollbars="vertical"
+            android:textColor="#17313B" />
 
         <TextView
             android:layout_width="wrap_content"
