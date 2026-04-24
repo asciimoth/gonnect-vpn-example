@@ -17,6 +17,12 @@ build-web:
 build-cli: build-web
     go build -o {{cli_bin}} ./cli
 
+build-gui:
+    go build -tags novulkan -o gonnect-vpn-gui ./gui
+
+run-gui: build-gui
+    ./gonnect-vpn-gui
+
 # Start HTTP server for demo
 serve: build-cli
     @echo "Starting HTTP server on http://localhost:9090"

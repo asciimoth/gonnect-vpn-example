@@ -38,6 +38,8 @@ go.work.sum
 
 vpn
 vpn.exe
+gonnect-vpn-gui
+gonnect-vpn-gui.exe
 
 web/app.wasm
 web/wasm_exec.js

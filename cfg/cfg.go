@@ -33,13 +33,22 @@ func Load() (cfg *Cfg) {
 	flag.StringVar(&cfg.TunSocksAddr, "socks", "", "local socks server addr for socks+http")
 	flag.Parse()
 
-	if cfg.Connect == "" && cfg.Serve == "" {
-		fmt.Println("You should specify --conn or --serve")
-		os.Exit(1)
-	}
-	if cfg.TunType == "" {
-		fmt.Println("You should specify --tun")
+	if err := Validate(cfg); err != nil {
+		fmt.Println(err)
 		os.Exit(1)
 	}
 	return
+}
+
+func Validate(cfg *Cfg) error {
+	if cfg == nil {
+		return fmt.Errorf("config is required")
+	}
+	if cfg.Connect == "" && cfg.Serve == "" {
+		return fmt.Errorf("you should specify --conn or --serve")
+	}
+	if cfg.TunType == "" {
+		return fmt.Errorf("you should specify --tun")
+	}
+	return nil
 }

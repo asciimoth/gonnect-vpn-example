@@ -55,6 +55,9 @@
     in {
       devShells.default = pkgs.mkShell {
         inherit (checks.pre-commit-check) shellHook;
+        nativeBuildInputs = with pkgs; [
+          pkg-config
+        ];
         buildInputs = with pkgs; [
           go
           golangci-lint
@@ -64,6 +67,30 @@
 
           typos
           commitizen
+
+          pkgsite
+          pkg-config
+
+          # graphics / windowing
+          mesa
+          libGL
+          vulkan-headers
+          vulkan-loader
+
+          # wayland
+          wayland
+          wayland-protocols
+
+          # x11
+          xorg.libX11
+          xorg.libXcursor
+          xorg.libXi
+          xorg.libXrandr
+          xorg.libXfixes
+          xorg.libxcb
+
+          # keyboard
+          libxkbcommon
         ];
       };
     });
