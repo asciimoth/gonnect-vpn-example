@@ -21,6 +21,14 @@
     flake-utils.lib.eachDefaultSystem (system: let
       pkgs = import nixpkgs {
         inherit system;
+        config.allowUnfree = true;
+        config.android_sdk.accept_license = true;
+      };
+      androidPkgs = pkgs.androidenv.composeAndroidPackages {
+        platformVersions = [ "35" ];
+        buildToolsVersions = [ "35.0.0" ];
+        includeNDK = true;
+        includeCmake = true;
       };
 
       checks = {
@@ -54,22 +62,37 @@
       };
     in {
       devShells.default = pkgs.mkShell {
-        inherit (checks.pre-commit-check) shellHook;
+        shellHook = checks.pre-commit-check.shellHook + ''
+          export JAVA_HOME=${pkgs.openjdk17_headless}
+          export ANDROID_HOME=${androidPkgs.androidsdk}/libexec/android-sdk
+          export ANDROID_SDK_ROOT=$ANDROID_HOME
+          export ANDROID_NDK_HOME=${androidPkgs.ndk-bundle}
+          export ANDROID_NDK_ROOT=${androidPkgs.ndk-bundle}
+        '';
         nativeBuildInputs = with pkgs; [
           pkg-config
         ];
         buildInputs = with pkgs; [
           go
+          gomobile
           golangci-lint
           gopls
 
           just
+
+          gradle
+          openjdk17_headless
+          android-tools
 
           typos
           commitizen
 
           pkgsite
           pkg-config
+
+          androidPkgs.androidsdk
+          androidPkgs.platform-tools
+          androidPkgs.ndk-bundle
 
           # graphics / windowing
           mesa
@@ -91,7 +114,7 @@
 
           # keyboard
           libxkbcommon
-        ];
+        ] ++ androidPkgs.build-tools ++ androidPkgs.cmake;
       };
     });
 }

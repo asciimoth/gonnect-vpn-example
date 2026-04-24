@@ -10,6 +10,7 @@ require (
 	github.com/asciimoth/socksgo v0.2.4
 	github.com/asciimoth/tuntap v0.1.7
 	github.com/coder/websocket v1.8.14
+	golang.org/x/net v0.44.0
 	golang.org/x/sys v0.42.0
 )
 
@@ -23,7 +24,6 @@ require (
 	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0 // indirect
 	golang.org/x/exp/shiny v0.0.0-20250408133849-7e4ce0ab07d0 // indirect
 	golang.org/x/image v0.26.0 // indirect
-	golang.org/x/net v0.44.0 // indirect
 	golang.org/x/text v0.29.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
