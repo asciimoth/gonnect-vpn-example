@@ -1,9 +1,8 @@
-//go:build unix && !linux
-
 package device
 
 import (
 	"context"
+	"os"
 	"os/exec"
 	"sync"
 
@@ -11,7 +10,10 @@ import (
 	"github.com/asciimoth/gonnect-vpn-example/logger"
 	"github.com/asciimoth/gonnect/tun"
 	"github.com/asciimoth/tuntap"
+	"golang.org/x/sys/unix"
 )
+
+const linuxTUNCloneDevice = "/dev/net/tun"
 
 func nativeFromCfg(
 	ctx context.Context,
@@ -32,7 +34,7 @@ func nativeFromCfg(
 		subnet = cfg.TunSubnet
 	}
 
-	nativeTun, err := tuntap.CreateTUN(name, 1500)
+	nativeTun, err := createLinuxNativeTUN(name, 1500)
 	if err != nil {
 		return nil, err
 	}
@@ -71,4 +73,35 @@ func nativeFromCfg(
 	logger.Printf("interface %s configured with %s", actualName, addr)
 
 	return nativeTun, nil
+}
+
+func createLinuxNativeTUN(name string, mtu int) (tun.Tun, error) {
+	fd, err := unix.Open(linuxTUNCloneDevice, unix.O_RDWR|unix.O_CLOEXEC, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	ifr, err := unix.NewIfreq(name)
+	if err != nil {
+		_ = unix.Close(fd)
+		return nil, err
+	}
+
+	// Intentionally keep Linux native TUNs in non-VNET_HDR mode.
+	// The current forwarding path reads one packet buffer at a time; with
+	// VNET_HDR enabled the kernel may deliver large GSO frames that require
+	// multi-buffer splitting, which can stall the VPN under heavy traffic.
+	ifr.SetUint16(unix.IFF_TUN | unix.IFF_NO_PI)
+	if err := unix.IoctlIfreq(fd, unix.TUNSETIFF, ifr); err != nil {
+		_ = unix.Close(fd)
+		return nil, err
+	}
+
+	file := os.NewFile(uintptr(fd), linuxTUNCloneDevice)
+	dev, err := tuntap.CreateTUNFromFile(file, mtu)
+	if err != nil {
+		_ = file.Close()
+		return nil, err
+	}
+	return dev, nil
 }
