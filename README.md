@@ -1,3 +1,7 @@
+<p align="center">
+<img src="./gonnect.svg" width="150" align="center">
+</p>
+
 # gonnect-vpn-example
 
 This repository demonstrates a simple peer-to-peer VPN built on top of the
@@ -119,10 +123,6 @@ Build and install:
 just build-android-apk
 just install-android-apk
 ```
-
-More Android-specific notes are in
-[docs/android-work-plan.md](docs/android-work-plan.md) and
-[docs/android-kotlin-handoff.md](docs/android-kotlin-handoff.md).
 
 ## Project Layout
 
