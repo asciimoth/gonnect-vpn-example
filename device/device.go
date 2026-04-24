@@ -25,6 +25,8 @@ const (
 
 func IsPrivileged(name string) bool {
 	switch name {
+	case "vtun":
+		return false
 	case "vtun+http":
 		return false
 	case "vtun+socks":

@@ -6,6 +6,7 @@ import (
 	"image"
 	"image/color"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 	"sync"
@@ -57,19 +58,25 @@ type gui struct {
 	lastEvent  string
 	stdoutLogs *log.Logger
 
-	session  *runner.Session
+	session  sessionHandle
+	vtun     *vtunClientSession
 	starting bool
 	stopping bool
 	status   string
+	running  bool
 
 	mode    widget.Enum
 	tunType widget.Enum
 
-	startBtn widget.Clickable
-	stopBtn  widget.Clickable
+	startBtn   widget.Clickable
+	stopBtn    widget.Clickable
+	requestBtn widget.Clickable
+	pingBtn    widget.Clickable
 
 	logView     widget.Editor
+	resultView  widget.Editor
 	controlList widget.List
+	toolList    widget.List
 
 	connect      widget.Editor
 	serve        widget.Editor
@@ -78,13 +85,25 @@ type gui struct {
 	tunSubnet    widget.Editor
 	tunHTTPAddr  widget.Editor
 	tunSocksAddr widget.Editor
+	method       widget.Editor
+	targetURL    widget.Editor
+	headers      widget.Editor
+	body         widget.Editor
+	pingTarget   widget.Editor
+
+	requesting bool
+	pinging    bool
+	resultText string
 }
 
 type uiUpdate struct {
 	err     error
-	session *runner.Session
+	session sessionHandle
+	vtun    *vtunClientSession
 	stopped bool
 	status  string
+	result  string
+	event   string
 }
 
 func newGUI(window *app.Window) *gui {
@@ -113,8 +132,11 @@ func newGUI(window *app.Window) *gui {
 	ui.tunType.Value = "vtun+http"
 
 	ui.controlList.Axis = layout.Vertical
+	ui.toolList.Axis = layout.Vertical
 	ui.logView.ReadOnly = true
 	ui.logView.SingleLine = false
+	ui.resultView.ReadOnly = true
+	ui.resultView.SingleLine = false
 
 	ui.connect.SingleLine = true
 	ui.connect.SetText("ws://127.0.0.1:8080/ws-vpn")
@@ -125,6 +147,14 @@ func newGUI(window *app.Window) *gui {
 	ui.tunSubnet.SingleLine = true
 	ui.tunHTTPAddr.SingleLine = true
 	ui.tunSocksAddr.SingleLine = true
+	ui.method.SingleLine = true
+	ui.method.SetText(http.MethodGet)
+	ui.targetURL.SingleLine = true
+	ui.targetURL.SetText("http://10.200.1.3/")
+	ui.headers.SingleLine = false
+	ui.body.SingleLine = false
+	ui.pingTarget.SingleLine = true
+	ui.pingTarget.SetText("10.200.1.3")
 	ui.tunSocksAddr.SetText("127.0.0.1:1080")
 	ui.logs.add("INFO", "gui ready")
 
@@ -161,6 +191,12 @@ func (u *gui) handleActions(gtx layout.Context) {
 	for u.stopBtn.Clicked(gtx) {
 		u.stopSession()
 	}
+	for u.requestBtn.Clicked(gtx) {
+		u.runVTunRequest()
+	}
+	for u.pingBtn.Clicked(gtx) {
+		u.runVTunPing()
+	}
 }
 
 func (u *gui) startSession() {
@@ -169,11 +205,48 @@ func (u *gui) startSession() {
 	}
 
 	conf := u.currentConfig()
+	if u.tunType.Value == "vtun" && u.mode.Value != "client" {
+		u.enqueue(uiUpdate{
+			err:    fmt.Errorf("vtun mode is only supported in gui client mode"),
+			status: "failed",
+		})
+		return
+	}
+
 	u.starting = true
 	u.stopping = false
 	u.status = "starting"
 	u.lastEvent = "starting vpn session"
 	u.logs.add("INFO", "starting vpn session")
+
+	if u.mode.Value == "client" && u.tunType.Value == "vtun" {
+		go func() {
+			session, err := newVTunClientSession(u.rootCtx, conf, u.logger)
+			if err != nil {
+				u.enqueue(uiUpdate{
+					err:    err,
+					status: "failed",
+				})
+				return
+			}
+
+			u.enqueue(uiUpdate{
+				session: session,
+				vtun:    session,
+				status:  "running",
+				event:   "vtun client is running",
+			})
+
+			go func() {
+				session.Wait()
+				u.enqueue(uiUpdate{
+					stopped: true,
+					status:  "stopped",
+				})
+			}()
+		}()
+		return
+	}
 
 	go func() {
 		session, err := runner.Start(u.rootCtx, conf, u.logger)
@@ -228,28 +301,57 @@ func (u *gui) applyUpdates() {
 			if update.err != nil {
 				u.logs.add("ERROR", update.err.Error())
 				u.session = nil
+				u.vtun = nil
 				u.starting = false
 				u.stopping = false
+				u.running = false
 				u.status = update.status
 				u.lastEvent = update.err.Error()
 				continue
 			}
 			if update.session != nil {
 				u.session = update.session
+				u.vtun = update.vtun
 				u.starting = false
 				u.stopping = false
+				u.running = true
 				u.status = update.status
-				u.lastEvent = "vpn session is running"
-				u.logs.add("INFO", "vpn session is running")
+				if update.event != "" {
+					u.lastEvent = update.event
+				} else {
+					u.lastEvent = "vpn session is running"
+				}
+				u.logs.add("INFO", u.lastEvent)
+				if update.result != "" {
+					u.resultText = update.result
+				}
 				continue
 			}
 			if update.stopped {
 				u.session = nil
+				u.vtun = nil
 				u.starting = false
 				u.stopping = false
+				u.running = false
+				u.requesting = false
+				u.pinging = false
 				u.status = update.status
 				u.lastEvent = "vpn session stopped"
 				u.logs.add("INFO", "vpn session stopped")
+				if update.result != "" {
+					u.resultText = update.result
+				}
+				continue
+			}
+			if update.result != "" || update.event != "" {
+				if update.result != "" {
+					u.resultText = update.result
+				}
+				if update.event != "" {
+					u.lastEvent = update.event
+				}
+				u.requesting = false
+				u.pinging = false
 			}
 		default:
 			return
@@ -280,15 +382,23 @@ func (u *gui) layout(gtx layout.Context) layout.Dimensions {
 	paint.Fill(gtx.Ops, color.NRGBA{R: 243, G: 245, B: 247, A: 255})
 
 	return layout.UniformInset(unit.Dp(16)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+		bottom := u.layoutControlsPanel
+		if u.showVTunTools() {
+			bottom = u.layoutBottomPanels
+		}
 		return layout.Flex{Axis: layout.Vertical}.Layout(
 			gtx,
 			layout.Rigid(u.layoutHeader),
 			layout.Rigid(layout.Spacer{Height: unit.Dp(12)}.Layout),
 			layout.Flexed(0.56, u.layoutLogsPanel),
 			layout.Rigid(layout.Spacer{Height: unit.Dp(12)}.Layout),
-			layout.Flexed(0.44, u.layoutControlsPanel),
+			layout.Flexed(0.44, bottom),
 		)
 	})
+}
+
+func (u *gui) showVTunTools() bool {
+	return u.mode.Value == "client" && u.tunType.Value == "vtun"
 }
 
 func (u *gui) layoutHeader(gtx layout.Context) layout.Dimensions {
@@ -399,7 +509,11 @@ func (u *gui) layoutLogsPanel(gtx layout.Context) layout.Dimensions {
 
 func (u *gui) layoutControlsPanel(gtx layout.Context) layout.Dimensions {
 	return u.layoutPanel(gtx, "Controls", func(gtx layout.Context) layout.Dimensions {
-		return material.List(u.theme, &u.controlList).Layout(gtx, 10, func(gtx layout.Context, index int) layout.Dimensions {
+		count := 10
+		if u.showVTunTools() {
+			count = 8
+		}
+		return material.List(u.theme, &u.controlList).Layout(gtx, count, func(gtx layout.Context, index int) layout.Dimensions {
 			return layout.Inset{Bottom: unit.Dp(10)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
 				switch index {
 				case 0:
@@ -417,6 +531,9 @@ func (u *gui) layoutControlsPanel(gtx layout.Context) layout.Dimensions {
 				case 6:
 					return u.layoutField(gtx, "TUN subnet", &u.tunSubnet, "10.200.1.0/24")
 				case 7:
+					if u.showVTunTools() {
+						return u.layoutActions(gtx)
+					}
 					return u.layoutField(gtx, "vtun+http bind", &u.tunHTTPAddr, "10.200.1.3:80")
 				case 8:
 					return u.layoutField(gtx, "vtun+socks bind", &u.tunSocksAddr, "127.0.0.1:1080")
@@ -464,6 +581,9 @@ func (u *gui) layoutTunTypeRow(gtx layout.Context) layout.Dimensions {
 				gtx,
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					return material.RadioButton(u.theme, &u.tunType, "native", "native").Layout(gtx)
+				}),
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					return material.RadioButton(u.theme, &u.tunType, "vtun", "vtun").Layout(gtx)
 				}),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					return material.RadioButton(u.theme, &u.tunType, "vtun+http", "vtun+http").Layout(gtx)
@@ -515,6 +635,81 @@ func (u *gui) layoutField(
 	)
 }
 
+func (u *gui) layoutBottomPanels(gtx layout.Context) layout.Dimensions {
+	return layout.Flex{Axis: layout.Horizontal}.Layout(
+		gtx,
+		layout.Flexed(0.42, u.layoutControlsPanel),
+		layout.Rigid(layout.Spacer{Width: unit.Dp(12)}.Layout),
+		layout.Flexed(0.58, u.layoutVTunToolsPanel),
+	)
+}
+
+func (u *gui) layoutVTunToolsPanel(gtx layout.Context) layout.Dimensions {
+	if u.resultView.Text() != u.resultText {
+		u.resultView.SetText(u.resultText)
+		u.resultView.SetCaret(u.resultView.Len(), u.resultView.Len())
+	}
+
+	return u.layoutPanel(gtx, "VTun Tools", func(gtx layout.Context) layout.Dimensions {
+		return material.List(u.theme, &u.toolList).Layout(gtx, 8, func(gtx layout.Context, index int) layout.Dimensions {
+			return layout.Inset{Bottom: unit.Dp(10)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+				switch index {
+				case 0:
+					return u.layoutField(gtx, "HTTP method", &u.method, "GET")
+				case 1:
+					return u.layoutField(gtx, "Target URL inside VPN", &u.targetURL, "http://10.200.1.3/")
+				case 2:
+					return u.layoutField(gtx, "Headers", &u.headers, "Accept: text/plain")
+				case 3:
+					return u.layoutField(gtx, "Body", &u.body, "Request body for POST/PUT/PATCH")
+				case 4:
+					return u.layoutField(gtx, "Ping target", &u.pingTarget, "10.200.1.3")
+				case 5:
+					return u.layoutVTunToolActions(gtx)
+				case 6:
+					return u.layoutField(gtx, "Result", &u.resultView, "")
+				default:
+					label := material.Caption(u.theme, "The plain vtun client behaves like the web demo: connect over WebSocket, then run HTTP requests or ICMP ping inside the VPN.")
+					label.Color = color.NRGBA{R: 88, G: 98, B: 110, A: 255}
+					return label.Layout(gtx)
+				}
+			})
+		})
+	})
+}
+
+func (u *gui) layoutVTunToolActions(gtx layout.Context) layout.Dimensions {
+	requestLabel := "Run HTTP request"
+	if u.requesting {
+		requestLabel = "Running request..."
+	}
+
+	pingLabel := "Ping"
+	if u.pinging {
+		pingLabel = "Pinging..."
+	}
+
+	return layout.Flex{Spacing: layout.SpaceStart}.Layout(
+		gtx,
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			button := material.Button(u.theme, &u.requestBtn, requestLabel)
+			if u.vtun == nil || u.requesting {
+				button.Background = color.NRGBA{R: 153, G: 160, B: 168, A: 255}
+			}
+			return button.Layout(gtx)
+		}),
+		layout.Rigid(layout.Spacer{Width: unit.Dp(12)}.Layout),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			button := material.Button(u.theme, &u.pingBtn, pingLabel)
+			button.Background = color.NRGBA{R: 96, G: 107, B: 120, A: 255}
+			if u.vtun == nil || u.pinging {
+				button.Background = color.NRGBA{R: 153, G: 160, B: 168, A: 255}
+			}
+			return button.Layout(gtx)
+		}),
+	)
+}
+
 func (u *gui) layoutActions(gtx layout.Context) layout.Dimensions {
 	startLabel := "Start"
 	if u.starting {
@@ -559,11 +754,82 @@ func (u *gui) layoutActions(gtx layout.Context) layout.Dimensions {
 			if u.mode.Value == "server" {
 				text = "Server mode listens on the server address and serves /ws-vpn for VPN peers."
 			}
+			if u.showVTunTools() {
+				text = "Client vtun mode matches the web demo: connect first, then run HTTP requests or ping over the VPN."
+			}
 			label := material.Caption(u.theme, text)
 			label.Color = color.NRGBA{R: 88, G: 98, B: 110, A: 255}
 			return label.Layout(gtx)
 		}),
 	)
+}
+
+func (u *gui) runVTunRequest() {
+	if u.vtun == nil || u.requesting {
+		return
+	}
+
+	u.requesting = true
+	u.lastEvent = "running vtun http request"
+	u.logs.add("INFO", "running vtun http request")
+
+	method := strings.TrimSpace(u.method.Text())
+	targetURL := strings.TrimSpace(u.targetURL.Text())
+	headersText := u.headers.Text()
+	bodyText := u.body.Text()
+
+	go func(session *vtunClientSession) {
+		result, err := session.DoRequest(
+			context.Background(),
+			method,
+			targetURL,
+			headersText,
+			bodyText,
+		)
+		if err != nil {
+			u.logs.add("ERROR", err.Error())
+			u.enqueue(uiUpdate{
+				result: "Error: " + err.Error(),
+				event:  "vtun http request failed",
+				status: u.status,
+			})
+			return
+		}
+		u.enqueue(uiUpdate{
+			result: result,
+			event:  "vtun http request completed",
+			status: u.status,
+		})
+	}(u.vtun)
+}
+
+func (u *gui) runVTunPing() {
+	if u.vtun == nil || u.pinging {
+		return
+	}
+
+	u.pinging = true
+	u.lastEvent = "running vtun ping"
+	u.logs.add("INFO", "running vtun ping")
+	target := strings.TrimSpace(u.pingTarget.Text())
+
+	go func(session *vtunClientSession) {
+		result, err := session.Ping(context.Background(), target)
+		if err != nil {
+			u.logs.add("ERROR", err.Error())
+			u.enqueue(uiUpdate{
+				result: "Error: " + err.Error(),
+				event:  "vtun ping failed",
+				status: u.status,
+			})
+			return
+		}
+		u.enqueue(uiUpdate{
+			result: result,
+			event:  "vtun ping completed",
+			status: u.status,
+		})
+	}(u.vtun)
 }
 
 func (u *gui) layoutPanel(
