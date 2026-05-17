@@ -19,7 +19,9 @@ func NewAndroidTunClientSession(
 	_ func(int) error,
 	_ logger.Logger,
 ) (*AndroidTunClientSession, error) {
-	return nil, fmt.Errorf("android tun client session is only supported on android")
+	return nil, fmt.Errorf(
+		"android tun client session is only supported on android",
+	)
 }
 
 func (s *AndroidTunClientSession) Stop() {}

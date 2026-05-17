@@ -16,7 +16,11 @@ func main() {
 	var logger logger.Logger = log.New(os.Stdout, "", log.Ltime|log.Lmicroseconds)
 	cfg := cfg.Load()
 
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	ctx, cancel := signal.NotifyContext(
+		context.Background(),
+		syscall.SIGINT,
+		syscall.SIGTERM,
+	)
 	defer cancel()
 
 	session, err := runner.Start(ctx, cfg, logger)

@@ -16,7 +16,9 @@ type DialConfig struct {
 
 func dialOptionsFromConfig(cfg DialConfig) (*websocket.DialOptions, error) {
 	if cfg.Dialer != nil {
-		return nil, fmt.Errorf("custom websocket dialers are not supported in js/wasm")
+		return nil, fmt.Errorf(
+			"custom websocket dialers are not supported in js/wasm",
+		)
 	}
 	if cfg.ProtectSocket != nil {
 		return nil, fmt.Errorf("socket protection is not supported in js/wasm")

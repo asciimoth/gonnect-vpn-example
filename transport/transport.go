@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/asciimoth/gonnect"
-	"github.com/asciimoth/gonnect/helpers"
 	"github.com/asciimoth/gonnect/tun"
 	"github.com/coder/websocket"
 )
@@ -19,7 +18,7 @@ func wrapEOF(err error) error {
 	if err == nil {
 		return nil
 	}
-	if helpers.ClosedNetworkErrToNil(err) == nil {
+	if gonnect.ClosedNetworkErrToNil(err) == nil {
 		return io.EOF
 	}
 	return err
@@ -31,7 +30,11 @@ func Dial(ctx context.Context, url string, dialer gonnect.Dial) (*Conn, error) {
 	})
 }
 
-func DialWithConfig(ctx context.Context, url string, cfg DialConfig) (*Conn, error) {
+func DialWithConfig(
+	ctx context.Context,
+	url string,
+	cfg DialConfig,
+) (*Conn, error) {
 	opts, err := dialOptionsFromConfig(cfg)
 	if err != nil {
 		return nil, err

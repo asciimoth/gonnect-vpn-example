@@ -47,11 +47,15 @@ func (c *Client) Connect(connectURL, tunAddr, tunName string) error {
 		tunName = defaultTunName
 	}
 
-	session, err := clientcore.NewVTunClientSession(context.Background(), &cfg.Cfg{
-		Connect: strings.TrimSpace(connectURL),
-		TunAddr: strings.TrimSpace(tunAddr),
-		TunName: tunName,
-	}, clientLogger{client: c})
+	session, err := clientcore.NewVTunClientSession(
+		context.Background(),
+		&cfg.Cfg{
+			Connect: strings.TrimSpace(connectURL),
+			TunAddr: strings.TrimSpace(tunAddr),
+			TunName: tunName,
+		},
+		clientLogger{client: c},
+	)
 	if err != nil {
 		c.setStatusf("connect failed: %v", err)
 		return err
@@ -80,16 +84,27 @@ func (c *Client) Disconnect() {
 	c.mu.Unlock()
 }
 
-func (c *Client) Request(method, targetURL, headersText, bodyText string) (string, error) {
+func (c *Client) Request(
+	method, targetURL, headersText, bodyText string,
+) (string, error) {
 	session := c.currentSession()
 	if session == nil {
 		return "", fmt.Errorf("client is not connected")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), defaultRequestTimout)
+	ctx, cancel := context.WithTimeout(
+		context.Background(),
+		defaultRequestTimout,
+	)
 	defer cancel()
 
-	result, err := session.DoRequest(ctx, method, targetURL, headersText, bodyText)
+	result, err := session.DoRequest(
+		ctx,
+		method,
+		targetURL,
+		headersText,
+		bodyText,
+	)
 	if err != nil {
 		c.setStatusf("request failed: %v", err)
 		return "", err

@@ -16,7 +16,6 @@ import (
 
 	"github.com/asciimoth/gonnect-vpn-example/logger"
 	"github.com/asciimoth/gonnect-vpn-example/transport"
-	"github.com/asciimoth/gonnect/loopback"
 	gt "github.com/asciimoth/gonnect/testing"
 	"github.com/asciimoth/gonnect/tun"
 )
@@ -48,7 +47,7 @@ func TestTransportTCPingPong(t *testing.T) {
 	<-tunClient.Events()
 	<-tunServer.Events()
 
-	loop := loopback.NewLoopbackNetwok()
+	loop := gonnect.NewLoopbackNetwok()
 	defer loop.Down() // nolint
 
 	ctx, cancel := context.WithCancel(t.Context())

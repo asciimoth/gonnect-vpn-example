@@ -23,7 +23,10 @@ func Handler() http.Handler {
 	embedded := http.FileServer(http.FS(root))
 	mux := http.NewServeMux()
 	mux.Handle("/", embedded)
-	mux.Handle("/wasm_exec.js", optionalFileHandler("web/wasm_exec.js", embedded))
+	mux.Handle(
+		"/wasm_exec.js",
+		optionalFileHandler("web/wasm_exec.js", embedded),
+	)
 	mux.Handle("/app.wasm", optionalFileHandler("web/app.wasm", embedded))
 	return mux
 }

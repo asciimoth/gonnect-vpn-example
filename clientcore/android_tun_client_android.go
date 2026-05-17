@@ -49,12 +49,20 @@ func NewAndroidTunClientSession(
 	dev, name, err := tuntap.CreateUnmonitoredTUNFromFD(tunFD)
 	if err != nil {
 		cancel()
-		return nil, fmt.Errorf("failed to create android tun from fd %d: %w", tunFD, err)
+		return nil, fmt.Errorf(
+			"failed to create android tun from fd %d: %w",
+			tunFD,
+			err,
+		)
 	}
 
-	conn, err := transport.DialWithConfig(ctx, conf.Connect, transport.DialConfig{
-		ProtectSocket: protectSocket,
-	})
+	conn, err := transport.DialWithConfig(
+		ctx,
+		conf.Connect,
+		transport.DialConfig{
+			ProtectSocket: protectSocket,
+		},
+	)
 	if err != nil {
 		cancel()
 		_ = dev.Close()

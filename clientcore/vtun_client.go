@@ -80,7 +80,12 @@ func NewVTunClientSession(
 	if err != nil {
 		cancel()
 		_ = conn.Close()
-		return nil, fmt.Errorf("failed to create vtun %q at %s: %w", name, addr, err)
+		return nil, fmt.Errorf(
+			"failed to create vtun %q at %s: %w",
+			name,
+			addr,
+			err,
+		)
 	}
 
 	p2p := tun.NewP2P(nil)
@@ -160,7 +165,12 @@ func (s *VTunClientSession) DoRequest(
 		return "", fmt.Errorf("target url is required")
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, targetURL, strings.NewReader(bodyText))
+	req, err := http.NewRequestWithContext(
+		ctx,
+		method,
+		targetURL,
+		strings.NewReader(bodyText),
+	)
 	if err != nil {
 		return "", err
 	}
@@ -219,7 +229,10 @@ func formatHTTPResponse(resp *http.Response, body []byte) string {
 	return result.String()
 }
 
-func (s *VTunClientSession) Ping(ctx context.Context, target string) (string, error) {
+func (s *VTunClientSession) Ping(
+	ctx context.Context,
+	target string,
+) (string, error) {
 	if s == nil || s.vtun == nil {
 		return "", fmt.Errorf("vtun client is not connected")
 	}
@@ -300,7 +313,13 @@ func (s *VTunClientSession) Ping(ctx context.Context, target string) (string, er
 	}
 
 	rtt := time.Since(started)
-	result := fmt.Sprintf("%d bytes from %s: seq=%d time=%s", len(echo.Data), addr, echo.Seq, rtt.Round(time.Millisecond))
+	result := fmt.Sprintf(
+		"%d bytes from %s: seq=%d time=%s",
+		len(echo.Data),
+		addr,
+		echo.Seq,
+		rtt.Round(time.Millisecond),
+	)
 	s.logger.Printf("vtun ping finished: %s", result)
 	return result, nil
 }

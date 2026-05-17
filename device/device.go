@@ -223,7 +223,12 @@ func vtunHttpFromCfg(
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		logger.Printf("> %s - %s - %s", r.RemoteAddr, r.URL.String(), r.UserAgent())
+		logger.Printf(
+			"> %s - %s - %s",
+			r.RemoteAddr,
+			r.URL.String(),
+			r.UserAgent(),
+		)
 		io.WriteString(w, "Hello from userspace TCP!")
 	})
 	server := &http.Server{Handler: mux}

@@ -29,7 +29,12 @@ func NewAndroidVPNClient() *AndroidVPNClient {
 	return c
 }
 
-func (c *AndroidVPNClient) Connect(connectURL string, tunFD int32, tunName string, protector SocketProtector) error {
+func (c *AndroidVPNClient) Connect(
+	connectURL string,
+	tunFD int32,
+	tunName string,
+	protector SocketProtector,
+) error {
 	c.mu.Lock()
 	if c.session != nil {
 		c.mu.Unlock()
@@ -53,10 +58,16 @@ func (c *AndroidVPNClient) Connect(connectURL string, tunFD int32, tunName strin
 		}
 	}
 
-	session, err := clientcore.NewAndroidTunClientSession(context.Background(), &cfg.Cfg{
-		Connect: strings.TrimSpace(connectURL),
-		TunName: tunName,
-	}, int(tunFD), protectFunc, androidClientLogger{client: c})
+	session, err := clientcore.NewAndroidTunClientSession(
+		context.Background(),
+		&cfg.Cfg{
+			Connect: strings.TrimSpace(connectURL),
+			TunName: tunName,
+		},
+		int(tunFD),
+		protectFunc,
+		androidClientLogger{client: c},
+	)
 	if err != nil {
 		c.setStatusf("connect failed: %v", err)
 		return err
@@ -97,7 +108,9 @@ func (c *AndroidVPNClient) Logs() string {
 	return strings.Join(c.logs, "\n")
 }
 
-func (c *AndroidVPNClient) takeSession(nextStatus string) *clientcore.AndroidTunClientSession {
+func (c *AndroidVPNClient) takeSession(
+	nextStatus string,
+) *clientcore.AndroidTunClientSession {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

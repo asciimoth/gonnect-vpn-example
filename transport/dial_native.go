@@ -19,7 +19,9 @@ type DialConfig struct {
 
 func dialOptionsFromConfig(cfg DialConfig) (*websocket.DialOptions, error) {
 	if cfg.Dialer != nil && cfg.ProtectSocket != nil {
-		return nil, fmt.Errorf("custom websocket dialer and socket protection cannot be combined")
+		return nil, fmt.Errorf(
+			"custom websocket dialer and socket protection cannot be combined",
+		)
 	}
 
 	if cfg.Dialer == nil && cfg.ProtectSocket == nil {

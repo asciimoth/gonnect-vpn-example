@@ -2,16 +2,16 @@ module github.com/asciimoth/gonnect-vpn-example
 
 go 1.25.5
 
-require github.com/asciimoth/gonnect v0.7.0
+require github.com/asciimoth/gonnect v0.13.0
 
 require (
 	gioui.org v0.9.0
-	github.com/asciimoth/gonnect-netstack v0.3.8
-	github.com/asciimoth/socksgo v0.2.4
-	github.com/asciimoth/tuntap v0.1.7
+	github.com/asciimoth/gonnect-netstack v0.4.15
+	github.com/asciimoth/socksgo v0.2.11
+	github.com/asciimoth/tuntap v0.3.2
 	github.com/coder/websocket v1.8.14
-	golang.org/x/net v0.46.0
-	golang.org/x/sys v0.42.0
+	golang.org/x/net v0.54.0
+	golang.org/x/sys v0.44.0
 )
 
 require (
@@ -25,11 +25,11 @@ require (
 	golang.org/x/exp/shiny v0.0.0-20251002181428-27f1f14c8bb9 // indirect
 	golang.org/x/image v0.32.0 // indirect
 	golang.org/x/mobile v0.0.0-20251009145931-8baca8bf4eeb // indirect
-	golang.org/x/mod v0.29.0 // indirect
-	golang.org/x/sync v0.17.0 // indirect
-	golang.org/x/text v0.30.0 // indirect
+	golang.org/x/mod v0.35.0 // indirect
+	golang.org/x/sync v0.20.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
-	golang.org/x/tools v0.38.0 // indirect
+	golang.org/x/tools v0.44.0 // indirect
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
 	gvisor.dev/gvisor v0.0.0-20260325202830-7644cf3a343c // indirect
 )

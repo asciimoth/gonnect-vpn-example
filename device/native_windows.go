@@ -97,14 +97,23 @@ func nativeFromCfg(
 			"store=active",
 		})
 	} else {
-		logger.Printf("skipping explicit route for %s; kernel installs it from %s", subnet, addr)
+		logger.Printf(
+			"skipping explicit route for %s; kernel installs it from %s",
+			subnet,
+			addr,
+		)
 	}
 
 	for _, cmd := range cmds {
 		logger.Printf("running: netsh %v", cmd)
 		out, err := exec.Command("netsh", cmd...).CombinedOutput()
 		if err != nil {
-			logger.Printf("command netsh %v failed: %v\noutput: %s", cmd, err, string(out))
+			logger.Printf(
+				"command netsh %v failed: %v\noutput: %s",
+				cmd,
+				err,
+				string(out),
+			)
 			_ = nativeTun.Close()
 			return nil, err
 		}
@@ -124,15 +133,23 @@ func parseIPv4Prefix(value string) (string, int, error) {
 		return "", 0, fmt.Errorf("parse tun addr %q: %w", value, err)
 	}
 	if !prefix.Addr().Is4() {
-		return "", 0, fmt.Errorf("native Windows tun requires IPv4 address, got %q", value)
+		return "", 0, fmt.Errorf(
+			"native Windows tun requires IPv4 address, got %q",
+			value,
+		)
 	}
 	return prefix.Addr().String(), prefix.Bits(), nil
 }
 
 func getInterfaceIndex(name string) (int, error) {
-	out, err := exec.Command("netsh", "interface", "ipv4", "show", "interfaces").CombinedOutput()
+	out, err := exec.Command("netsh", "interface", "ipv4", "show", "interfaces").
+		CombinedOutput()
 	if err != nil {
-		return 0, fmt.Errorf("list interfaces: %w\noutput: %s", err, string(out))
+		return 0, fmt.Errorf(
+			"list interfaces: %w\noutput: %s",
+			err,
+			string(out),
+		)
 	}
 
 	for _, line := range strings.Split(string(out), "\n") {

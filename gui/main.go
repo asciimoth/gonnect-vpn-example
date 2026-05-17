@@ -216,7 +216,9 @@ func (u *gui) startSession() {
 	conf := u.currentConfig()
 	if u.tunType.Value == "vtun" && u.mode.Value != "client" {
 		u.enqueue(uiUpdate{
-			err:    fmt.Errorf("vtun mode is only supported in gui client mode"),
+			err: fmt.Errorf(
+				"vtun mode is only supported in gui client mode",
+			),
 			status: "failed",
 		})
 		return
@@ -230,7 +232,11 @@ func (u *gui) startSession() {
 
 	if u.mode.Value == "client" && u.tunType.Value == "vtun" {
 		go func() {
-			session, err := clientcore.NewVTunClientSession(u.rootCtx, conf, u.logger)
+			session, err := clientcore.NewVTunClientSession(
+				u.rootCtx,
+				conf,
+				u.logger,
+			)
 			if err != nil {
 				u.enqueue(uiUpdate{
 					err:    err,
@@ -390,20 +396,21 @@ func (u *gui) currentConfig() *cfg.Cfg {
 func (u *gui) layout(gtx layout.Context) layout.Dimensions {
 	paint.Fill(gtx.Ops, color.NRGBA{R: 243, G: 245, B: 247, A: 255})
 
-	return layout.UniformInset(unit.Dp(16)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-		bottom := u.layoutControlsPanel
-		if u.showVTunTools() {
-			bottom = u.layoutBottomPanels
-		}
-		return layout.Flex{Axis: layout.Vertical}.Layout(
-			gtx,
-			layout.Rigid(u.layoutHeader),
-			layout.Rigid(layout.Spacer{Height: unit.Dp(12)}.Layout),
-			layout.Flexed(0.56, u.layoutLogsPanel),
-			layout.Rigid(layout.Spacer{Height: unit.Dp(12)}.Layout),
-			layout.Flexed(0.44, bottom),
-		)
-	})
+	return layout.UniformInset(unit.Dp(16)).
+		Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+			bottom := u.layoutControlsPanel
+			if u.showVTunTools() {
+				bottom = u.layoutBottomPanels
+			}
+			return layout.Flex{Axis: layout.Vertical}.Layout(
+				gtx,
+				layout.Rigid(u.layoutHeader),
+				layout.Rigid(layout.Spacer{Height: unit.Dp(12)}.Layout),
+				layout.Flexed(0.56, u.layoutLogsPanel),
+				layout.Rigid(layout.Spacer{Height: unit.Dp(12)}.Layout),
+				layout.Flexed(0.44, bottom),
+			)
+		})
 }
 
 func (u *gui) showVTunTools() bool {
@@ -460,16 +467,19 @@ func (u *gui) layoutStatusBanner(gtx layout.Context) layout.Dimensions {
 		return layout.Background{}.Layout(
 			gtx,
 			func(gtx layout.Context) layout.Dimensions {
-				defer clip.UniformRRect(image.Rectangle{Max: gtx.Constraints.Min}, gtx.Dp(unit.Dp(10))).Push(gtx.Ops).Pop()
+				defer clip.UniformRRect(image.Rectangle{Max: gtx.Constraints.Min}, gtx.Dp(unit.Dp(10))).
+					Push(gtx.Ops).
+					Pop()
 				paint.Fill(gtx.Ops, bg)
 				return layout.Dimensions{Size: gtx.Constraints.Min}
 			},
 			func(gtx layout.Context) layout.Dimensions {
-				return layout.UniformInset(unit.Dp(10)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-					label := material.Body1(u.theme, u.lastEvent)
-					label.Color = fg
-					return label.Layout(gtx)
-				})
+				return layout.UniformInset(unit.Dp(10)).
+					Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						label := material.Body1(u.theme, u.lastEvent)
+						label.Color = fg
+						return label.Layout(gtx)
+					})
 			},
 		)
 	})
@@ -486,72 +496,139 @@ func (u *gui) layoutLogsPanel(gtx layout.Context) layout.Dimensions {
 		u.logView.SetCaret(u.logView.Len(), u.logView.Len())
 	}
 
-	return u.layoutPanel(gtx, "Logs", func(gtx layout.Context) layout.Dimensions {
-		border := widget.Border{
-			Color:        color.NRGBA{R: 225, G: 229, B: 234, A: 255},
-			CornerRadius: unit.Dp(8),
-			Width:        unit.Dp(1),
-		}
-		return border.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-			minHeight := gtx.Dp(unit.Dp(180))
-			if gtx.Constraints.Min.Y < minHeight {
-				gtx.Constraints.Min.Y = minHeight
+	return u.layoutPanel(
+		gtx,
+		"Logs",
+		func(gtx layout.Context) layout.Dimensions {
+			border := widget.Border{
+				Color:        color.NRGBA{R: 225, G: 229, B: 234, A: 255},
+				CornerRadius: unit.Dp(8),
+				Width:        unit.Dp(1),
 			}
-			return layout.Background{}.Layout(
+			return border.Layout(
 				gtx,
 				func(gtx layout.Context) layout.Dimensions {
-					defer clip.UniformRRect(image.Rectangle{Max: gtx.Constraints.Min}, gtx.Dp(unit.Dp(8))).Push(gtx.Ops).Pop()
-					paint.Fill(gtx.Ops, color.NRGBA{R: 244, G: 247, B: 249, A: 255})
-					return layout.Dimensions{Size: gtx.Constraints.Min}
-				},
-				func(gtx layout.Context) layout.Dimensions {
-					return layout.UniformInset(unit.Dp(10)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-						editor := material.Editor(u.theme, &u.logView, "")
-						editor.Color = color.NRGBA{R: 28, G: 33, B: 42, A: 255}
-						return editor.Layout(gtx)
-					})
+					minHeight := gtx.Dp(unit.Dp(180))
+					if gtx.Constraints.Min.Y < minHeight {
+						gtx.Constraints.Min.Y = minHeight
+					}
+					return layout.Background{}.Layout(
+						gtx,
+						func(gtx layout.Context) layout.Dimensions {
+							defer clip.UniformRRect(image.Rectangle{Max: gtx.Constraints.Min}, gtx.Dp(unit.Dp(8))).
+								Push(gtx.Ops).
+								Pop()
+							paint.Fill(
+								gtx.Ops,
+								color.NRGBA{R: 244, G: 247, B: 249, A: 255},
+							)
+							return layout.Dimensions{Size: gtx.Constraints.Min}
+						},
+						func(gtx layout.Context) layout.Dimensions {
+							return layout.UniformInset(unit.Dp(10)).
+								Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+									editor := material.Editor(
+										u.theme,
+										&u.logView,
+										"",
+									)
+									editor.Color = color.NRGBA{
+										R: 28,
+										G: 33,
+										B: 42,
+										A: 255,
+									}
+									return editor.Layout(gtx)
+								})
+						},
+					)
 				},
 			)
-		})
-	})
+		},
+	)
 }
 
 func (u *gui) layoutControlsPanel(gtx layout.Context) layout.Dimensions {
-	return u.layoutPanel(gtx, "Controls", func(gtx layout.Context) layout.Dimensions {
-		count := 10
-		if u.showVTunTools() {
-			count = 8
-		}
-		return material.List(u.theme, &u.controlList).Layout(gtx, count, func(gtx layout.Context, index int) layout.Dimensions {
-			return layout.Inset{Bottom: unit.Dp(10)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				switch index {
-				case 0:
-					return u.layoutModeRow(gtx)
-				case 1:
-					return u.layoutTunTypeRow(gtx)
-				case 2:
-					return u.layoutField(gtx, "Server address", &u.serve, "127.0.0.1:8080")
-				case 3:
-					return u.layoutField(gtx, "Connect URL", &u.connect, "ws://127.0.0.1:8080/ws-vpn")
-				case 4:
-					return u.layoutField(gtx, "TUN name", &u.tunName, "tun0 or custom userspace name")
-				case 5:
-					return u.layoutField(gtx, "TUN address", &u.tunAddr, "10.200.1.3 or 10.200.1.2/24")
-				case 6:
-					return u.layoutField(gtx, "TUN subnet", &u.tunSubnet, "10.200.1.0/24")
-				case 7:
-					if u.showVTunTools() {
-						return u.layoutActions(gtx)
-					}
-					return u.layoutField(gtx, "vtun+http bind", &u.tunHTTPAddr, "10.200.1.3:80")
-				case 8:
-					return u.layoutField(gtx, "vtun+socks bind", &u.tunSocksAddr, "127.0.0.1:1080")
-				default:
-					return u.layoutActions(gtx)
-				}
-			})
-		})
-	})
+	return u.layoutPanel(
+		gtx,
+		"Controls",
+		func(gtx layout.Context) layout.Dimensions {
+			count := 10
+			if u.showVTunTools() {
+				count = 8
+			}
+			return material.List(u.theme, &u.controlList).
+				Layout(gtx, count, func(gtx layout.Context, index int) layout.Dimensions {
+					return layout.Inset{
+						Bottom: unit.Dp(10),
+					}.Layout(
+						gtx,
+						func(gtx layout.Context) layout.Dimensions {
+							switch index {
+							case 0:
+								return u.layoutModeRow(gtx)
+							case 1:
+								return u.layoutTunTypeRow(gtx)
+							case 2:
+								return u.layoutField(
+									gtx,
+									"Server address",
+									&u.serve,
+									"127.0.0.1:8080",
+								)
+							case 3:
+								return u.layoutField(
+									gtx,
+									"Connect URL",
+									&u.connect,
+									"ws://127.0.0.1:8080/ws-vpn",
+								)
+							case 4:
+								return u.layoutField(
+									gtx,
+									"TUN name",
+									&u.tunName,
+									"tun0 or custom userspace name",
+								)
+							case 5:
+								return u.layoutField(
+									gtx,
+									"TUN address",
+									&u.tunAddr,
+									"10.200.1.3 or 10.200.1.2/24",
+								)
+							case 6:
+								return u.layoutField(
+									gtx,
+									"TUN subnet",
+									&u.tunSubnet,
+									"10.200.1.0/24",
+								)
+							case 7:
+								if u.showVTunTools() {
+									return u.layoutActions(gtx)
+								}
+								return u.layoutField(
+									gtx,
+									"vtun+http bind",
+									&u.tunHTTPAddr,
+									"10.200.1.3:80",
+								)
+							case 8:
+								return u.layoutField(
+									gtx,
+									"vtun+socks bind",
+									&u.tunSocksAddr,
+									"127.0.0.1:1080",
+								)
+							default:
+								return u.layoutActions(gtx)
+							}
+						},
+					)
+				})
+		},
+	)
 }
 
 func (u *gui) layoutModeRow(gtx layout.Context) layout.Dimensions {
@@ -566,11 +643,13 @@ func (u *gui) layoutModeRow(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{Spacing: layout.SpaceStart}.Layout(
 				gtx,
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					return material.RadioButton(u.theme, &u.mode, "server", "Server").Layout(gtx)
+					return material.RadioButton(u.theme, &u.mode, "server", "Server").
+						Layout(gtx)
 				}),
 				layout.Rigid(layout.Spacer{Width: unit.Dp(18)}.Layout),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					return material.RadioButton(u.theme, &u.mode, "client", "Client").Layout(gtx)
+					return material.RadioButton(u.theme, &u.mode, "client", "Client").
+						Layout(gtx)
 				}),
 			)
 		}),
@@ -589,27 +668,37 @@ func (u *gui) layoutTunTypeRow(gtx layout.Context) layout.Dimensions {
 			return layout.Flex{Axis: layout.Vertical}.Layout(
 				gtx,
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					return material.RadioButton(u.theme, &u.tunType, "native", "native").Layout(gtx)
+					return material.RadioButton(u.theme, &u.tunType, "native", "native").
+						Layout(gtx)
 				}),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					return material.RadioButton(u.theme, &u.tunType, "vtun", "vtun").Layout(gtx)
+					return material.RadioButton(u.theme, &u.tunType, "vtun", "vtun").
+						Layout(gtx)
 				}),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					return material.RadioButton(u.theme, &u.tunType, "vtun+http", "vtun+http").Layout(gtx)
+					return material.RadioButton(u.theme, &u.tunType, "vtun+http", "vtun+http").
+						Layout(gtx)
 				}),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					return material.RadioButton(u.theme, &u.tunType, "vtun+socks", "vtun+socks").Layout(gtx)
+					return material.RadioButton(u.theme, &u.tunType, "vtun+socks", "vtun+socks").
+						Layout(gtx)
 				}),
 			)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			if u.tunType.Value == "native" && !helpers.IsAdmin() {
-				label := material.Caption(u.theme, "native requires admin privileges on this machine")
+				label := material.Caption(
+					u.theme,
+					"native requires admin privileges on this machine",
+				)
 				label.Color = color.NRGBA{R: 176, G: 70, B: 28, A: 255}
 				return label.Layout(gtx)
 			}
 			if !device.IsPrivileged(u.tunType.Value) {
-				label := material.Caption(u.theme, "userspace vtun backends do not require admin privileges")
+				label := material.Caption(
+					u.theme,
+					"userspace vtun backends do not require admin privileges",
+				)
 				label.Color = color.NRGBA{R: 78, G: 114, B: 58, A: 255}
 				return label.Layout(gtx)
 			}
@@ -637,9 +726,13 @@ func (u *gui) layoutField(
 				CornerRadius: unit.Dp(8),
 				Width:        unit.Dp(1),
 			}
-			return border.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				return layout.UniformInset(unit.Dp(10)).Layout(gtx, material.Editor(u.theme, editor, hint).Layout)
-			})
+			return border.Layout(
+				gtx,
+				func(gtx layout.Context) layout.Dimensions {
+					return layout.UniformInset(unit.Dp(10)).
+						Layout(gtx, material.Editor(u.theme, editor, hint).Layout)
+				},
+			)
 		}),
 	)
 }
@@ -659,32 +752,80 @@ func (u *gui) layoutVTunToolsPanel(gtx layout.Context) layout.Dimensions {
 		u.resultView.SetCaret(u.resultView.Len(), u.resultView.Len())
 	}
 
-	return u.layoutPanel(gtx, "VTun Tools", func(gtx layout.Context) layout.Dimensions {
-		return material.List(u.theme, &u.toolList).Layout(gtx, 8, func(gtx layout.Context, index int) layout.Dimensions {
-			return layout.Inset{Bottom: unit.Dp(10)}.Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-				switch index {
-				case 0:
-					return u.layoutField(gtx, "HTTP method", &u.method, "GET")
-				case 1:
-					return u.layoutField(gtx, "Target URL inside VPN", &u.targetURL, "http://10.200.1.3/")
-				case 2:
-					return u.layoutField(gtx, "Headers", &u.headers, "Accept: text/plain")
-				case 3:
-					return u.layoutField(gtx, "Body", &u.body, "Request body for POST/PUT/PATCH")
-				case 4:
-					return u.layoutField(gtx, "Ping target", &u.pingTarget, "10.200.1.3")
-				case 5:
-					return u.layoutVTunToolActions(gtx)
-				case 6:
-					return u.layoutField(gtx, "Result", &u.resultView, "")
-				default:
-					label := material.Caption(u.theme, "The plain vtun client behaves like the web demo: connect over WebSocket, then run HTTP requests or ICMP ping inside the VPN.")
-					label.Color = color.NRGBA{R: 88, G: 98, B: 110, A: 255}
-					return label.Layout(gtx)
-				}
-			})
-		})
-	})
+	return u.layoutPanel(
+		gtx,
+		"VTun Tools",
+		func(gtx layout.Context) layout.Dimensions {
+			return material.List(u.theme, &u.toolList).
+				Layout(gtx, 8, func(gtx layout.Context, index int) layout.Dimensions {
+					return layout.Inset{
+						Bottom: unit.Dp(10),
+					}.Layout(
+						gtx,
+						func(gtx layout.Context) layout.Dimensions {
+							switch index {
+							case 0:
+								return u.layoutField(
+									gtx,
+									"HTTP method",
+									&u.method,
+									"GET",
+								)
+							case 1:
+								return u.layoutField(
+									gtx,
+									"Target URL inside VPN",
+									&u.targetURL,
+									"http://10.200.1.3/",
+								)
+							case 2:
+								return u.layoutField(
+									gtx,
+									"Headers",
+									&u.headers,
+									"Accept: text/plain",
+								)
+							case 3:
+								return u.layoutField(
+									gtx,
+									"Body",
+									&u.body,
+									"Request body for POST/PUT/PATCH",
+								)
+							case 4:
+								return u.layoutField(
+									gtx,
+									"Ping target",
+									&u.pingTarget,
+									"10.200.1.3",
+								)
+							case 5:
+								return u.layoutVTunToolActions(gtx)
+							case 6:
+								return u.layoutField(
+									gtx,
+									"Result",
+									&u.resultView,
+									"",
+								)
+							default:
+								label := material.Caption(
+									u.theme,
+									"The plain vtun client behaves like the web demo: connect over WebSocket, then run HTTP requests or ICMP ping inside the VPN.",
+								)
+								label.Color = color.NRGBA{
+									R: 88,
+									G: 98,
+									B: 110,
+									A: 255,
+								}
+								return label.Layout(gtx)
+							}
+						},
+					)
+				})
+		},
+	)
 }
 
 func (u *gui) layoutVTunToolActions(gtx layout.Context) layout.Dimensions {
@@ -740,16 +881,31 @@ func (u *gui) layoutActions(gtx layout.Context) layout.Dimensions {
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					button := material.Button(u.theme, &u.startBtn, startLabel)
 					if u.starting || u.session != nil {
-						button.Background = color.NRGBA{R: 150, G: 181, B: 206, A: 255}
+						button.Background = color.NRGBA{
+							R: 150,
+							G: 181,
+							B: 206,
+							A: 255,
+						}
 					}
 					return button.Layout(gtx)
 				}),
 				layout.Rigid(layout.Spacer{Width: unit.Dp(12)}.Layout),
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					button := material.Button(u.theme, &u.stopBtn, stopLabel)
-					button.Background = color.NRGBA{R: 96, G: 107, B: 120, A: 255}
+					button.Background = color.NRGBA{
+						R: 96,
+						G: 107,
+						B: 120,
+						A: 255,
+					}
 					if u.session == nil {
-						button.Background = color.NRGBA{R: 153, G: 160, B: 168, A: 255}
+						button.Background = color.NRGBA{
+							R: 153,
+							G: 160,
+							B: 168,
+							A: 255,
+						}
 					}
 					return button.Layout(gtx)
 				}),
@@ -856,23 +1012,35 @@ func (u *gui) layoutPanel(
 		return layout.Background{}.Layout(
 			gtx,
 			func(gtx layout.Context) layout.Dimensions {
-				defer clip.UniformRRect(image.Rectangle{Max: gtx.Constraints.Min}, gtx.Dp(unit.Dp(12))).Push(gtx.Ops).Pop()
+				defer clip.UniformRRect(image.Rectangle{Max: gtx.Constraints.Min}, gtx.Dp(unit.Dp(12))).
+					Push(gtx.Ops).
+					Pop()
 				paint.Fill(gtx.Ops, color.NRGBA{R: 250, G: 251, B: 252, A: 255})
 				return layout.Dimensions{Size: gtx.Constraints.Min}
 			},
 			func(gtx layout.Context) layout.Dimensions {
-				return layout.UniformInset(unit.Dp(14)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
-					return layout.Flex{Axis: layout.Vertical}.Layout(
-						gtx,
-						layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-							label := material.H6(u.theme, title)
-							label.Color = color.NRGBA{R: 34, G: 41, B: 48, A: 255}
-							return label.Layout(gtx)
-						}),
-						layout.Rigid(layout.Spacer{Height: unit.Dp(8)}.Layout),
-						layout.Flexed(1, content),
-					)
-				})
+				return layout.UniformInset(unit.Dp(14)).
+					Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						return layout.Flex{Axis: layout.Vertical}.Layout(
+							gtx,
+							layout.Rigid(
+								func(gtx layout.Context) layout.Dimensions {
+									label := material.H6(u.theme, title)
+									label.Color = color.NRGBA{
+										R: 34,
+										G: 41,
+										B: 48,
+										A: 255,
+									}
+									return label.Layout(gtx)
+								},
+							),
+							layout.Rigid(
+								layout.Spacer{Height: unit.Dp(8)}.Layout,
+							),
+							layout.Flexed(1, content),
+						)
+					})
 			},
 		)
 	})
@@ -893,7 +1061,12 @@ func newLogBuffer(limit int, notifyUI func()) *logBuffer {
 }
 
 func (b *logBuffer) add(level string, message string) {
-	line := fmt.Sprintf("%s [%s] %s", time.Now().Format("15:04:05.000"), level, message)
+	line := fmt.Sprintf(
+		"%s [%s] %s",
+		time.Now().Format("15:04:05.000"),
+		level,
+		message,
+	)
 
 	b.mu.Lock()
 	b.lines = append(b.lines, line)

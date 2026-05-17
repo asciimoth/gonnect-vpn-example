@@ -213,7 +213,13 @@ func (a *app) request(args []js.Value) (any, error) {
 	result.WriteString("\n")
 	result.Write(body)
 
-	logf("request finished: method=%s url=%q status=%s bytes=%d\n", method, targetURL, resp.Status, len(body))
+	logf(
+		"request finished: method=%s url=%q status=%s bytes=%d\n",
+		method,
+		targetURL,
+		resp.Status,
+		len(body),
+	)
 	return result.String(), nil
 }
 

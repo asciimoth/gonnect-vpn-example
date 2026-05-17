@@ -52,7 +52,11 @@ func TestVTunSocksReachesPeerHTTPWithDefaultAddresses(t *testing.T) {
 	link.SetA(serverVTun)
 	link.SetB(clientVTun)
 
-	httpListener, err := clientVTun.ListenTCP(ctx, "tcp4", net.JoinHostPort(clientAddr, "80"))
+	httpListener, err := clientVTun.ListenTCP(
+		ctx,
+		"tcp4",
+		net.JoinHostPort(clientAddr, "80"),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +101,9 @@ func TestVTunSocksReachesPeerHTTPWithDefaultAddresses(t *testing.T) {
 		}
 	})
 
-	proxyClient, err := socksgo.ClientFromURL("socks5://" + proxyListener.Addr().String())
+	proxyClient, err := socksgo.ClientFromURL(
+		"socks5://" + proxyListener.Addr().String(),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,13 +111,20 @@ func TestVTunSocksReachesPeerHTTPWithDefaultAddresses(t *testing.T) {
 	reqCtx, reqCancel := context.WithTimeout(ctx, 5*time.Second)
 	defer reqCancel()
 
-	conn, err := proxyClient.Dial(reqCtx, "tcp4", net.JoinHostPort(clientAddr, "80"))
+	conn, err := proxyClient.Dial(
+		reqCtx,
+		"tcp4",
+		net.JoinHostPort(clientAddr, "80"),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer conn.Close() //nolint:errcheck
 
-	if _, err := io.WriteString(conn, "GET / HTTP/1.1\r\nHost: "+clientAddr+"\r\nConnection: close\r\n\r\n"); err != nil {
+	if _, err := io.WriteString(
+		conn,
+		"GET / HTTP/1.1\r\nHost: "+clientAddr+"\r\nConnection: close\r\n\r\n",
+	); err != nil {
 		t.Fatal(err)
 	}
 

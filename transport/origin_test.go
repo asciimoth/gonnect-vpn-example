@@ -14,14 +14,16 @@ func TestAcceptAllowsCrossOrigin(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		conn, err := transport.Accept(ctx, w, r)
-		if err != nil {
-			t.Errorf("accept websocket: %v", err)
-			return
-		}
-		defer conn.Close() // nolint:errcheck
-	}))
+	server := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			conn, err := transport.Accept(ctx, w, r)
+			if err != nil {
+				t.Errorf("accept websocket: %v", err)
+				return
+			}
+			defer conn.Close() // nolint:errcheck
+		}),
+	)
 	defer server.Close()
 
 	wsURL := "ws" + server.URL[len("http"):]

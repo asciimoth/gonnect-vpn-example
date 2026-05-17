@@ -20,7 +20,9 @@ import (
 )
 
 func TestParseHeaderLines(t *testing.T) {
-	headers, err := parseHeaderLines("Accept: text/plain\nX-Test: one\nX-Test: two\n")
+	headers, err := parseHeaderLines(
+		"Accept: text/plain\nX-Test: one\nX-Test: two\n",
+	)
 	if err != nil {
 		t.Fatalf("parseHeaderLines returned error: %v", err)
 	}
@@ -158,7 +160,13 @@ func TestVTunClientSessionRequestAndPing(t *testing.T) {
 	requestCtx, requestCancel := context.WithTimeout(ctx, 5*time.Second)
 	defer requestCancel()
 
-	response, err := session.DoRequest(requestCtx, http.MethodGet, "http://10.200.1.3/", "X-Demo: true", "")
+	response, err := session.DoRequest(
+		requestCtx,
+		http.MethodGet,
+		"http://10.200.1.3/",
+		"X-Demo: true",
+		"",
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,7 +193,11 @@ func TestVTunClientSessionRequestAndPing(t *testing.T) {
 }
 
 func TestNewVTunClientSessionRequiresConnectURL(t *testing.T) {
-	_, err := NewVTunClientSession(context.Background(), &cfg.Cfg{}, &logger.TestingLogger{T: t})
+	_, err := NewVTunClientSession(
+		context.Background(),
+		&cfg.Cfg{},
+		&logger.TestingLogger{T: t},
+	)
 	if err == nil {
 		t.Fatal("expected error for missing connect url")
 	}

@@ -23,12 +23,19 @@ type Session struct {
 	once   sync.Once
 }
 
-func Start(parent context.Context, conf *cfg.Cfg, logger logger.Logger) (*Session, error) {
+func Start(
+	parent context.Context,
+	conf *cfg.Cfg,
+	logger logger.Logger,
+) (*Session, error) {
 	if err := cfg.Validate(conf); err != nil {
 		return nil, err
 	}
 	if device.IsPrivileged(conf.TunType) && !helpers.IsAdmin() {
-		return nil, fmt.Errorf("%q tun type needs admin privileges", conf.TunType)
+		return nil, fmt.Errorf(
+			"%q tun type needs admin privileges",
+			conf.TunType,
+		)
 	}
 
 	ctx, cancel := context.WithCancel(parent)
@@ -158,7 +165,10 @@ func startServer(
 
 	wg.Go(func() {
 		logger.Printf("vpn server listening on ws://%s/ws-vpn", cfg.Serve)
-		if err := server.Serve(listener); err != nil && err != http.ErrServerClosed {
+		if err := server.Serve(
+			listener,
+		); err != nil &&
+			err != http.ErrServerClosed {
 			logger.Printf("vpn server stopped: %v", err)
 		}
 	})

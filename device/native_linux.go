@@ -55,16 +55,28 @@ func nativeFromCfg(
 		{"ip", "-4", "addr", "add", addr, "dev", actualName},
 	}
 	if shouldAddNativeRoute(addr, subnet) {
-		cmds = append(cmds, []string{"ip", "-4", "route", "add", subnet, "dev", actualName})
+		cmds = append(
+			cmds,
+			[]string{"ip", "-4", "route", "add", subnet, "dev", actualName},
+		)
 	} else {
-		logger.Printf("skipping explicit route for %s; kernel installs it from %s", subnet, addr)
+		logger.Printf(
+			"skipping explicit route for %s; kernel installs it from %s",
+			subnet,
+			addr,
+		)
 	}
 
 	for _, cmd := range cmds {
 		logger.Printf("running: %v", cmd)
 		out, err := exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
 		if err != nil {
-			logger.Panicln("command %v failed: %v\noutput: %s", cmd, err, string(out))
+			logger.Panicln(
+				"command %v failed: %v\noutput: %s",
+				cmd,
+				err,
+				string(out),
+			)
 			_ = nativeTun.Close()
 			return nil, err
 		}
