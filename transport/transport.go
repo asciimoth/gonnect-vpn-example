@@ -97,6 +97,8 @@ type Conn struct {
 	Ev    chan tun.Event
 }
 
+func (c *Conn) IsNative() bool { return false }
+
 func (c *Conn) MWO() int {
 	return 0
 }

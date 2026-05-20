@@ -2,13 +2,13 @@ module github.com/asciimoth/gonnect-vpn-example
 
 go 1.25.5
 
-require github.com/asciimoth/gonnect v0.13.0
+require github.com/asciimoth/gonnect v0.14.0
 
 require (
 	gioui.org v0.9.0
-	github.com/asciimoth/gonnect-netstack v0.4.15
-	github.com/asciimoth/socksgo v0.2.11
-	github.com/asciimoth/tuntap v0.3.2
+	github.com/asciimoth/gonnect-netstack v0.4.16
+	github.com/asciimoth/socksgo v0.2.12
+	github.com/asciimoth/tuntap v0.3.3
 	github.com/coder/websocket v1.8.14
 	golang.org/x/net v0.54.0
 	golang.org/x/sys v0.44.0
