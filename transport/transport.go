@@ -7,6 +7,8 @@ import (
 	"os"
 
 	"github.com/asciimoth/gonnect"
+	"github.com/asciimoth/gonnect-vpn-example/logger"
+	"github.com/asciimoth/gonnect-vpn-example/socklog"
 	"github.com/asciimoth/gonnect/tun"
 	"github.com/coder/websocket"
 )
@@ -95,9 +97,14 @@ type Conn struct {
 	Ctx   context.Context // nolint
 	RAddr string
 	Ev    chan tun.Event
+	Log   logger.Logger
 }
 
 func (c *Conn) IsNative() bool { return false }
+
+func (c *Conn) SetLogger(log logger.Logger) {
+	c.Log = log
+}
 
 func (c *Conn) MWO() int {
 	return 0
@@ -128,10 +135,12 @@ func (c *Conn) Read(
 
 func (c *Conn) Write(bufs [][]byte, offset int) (int, error) {
 	for i, b := range bufs {
-		err := c.WS.Write(c.Ctx, websocket.MessageBinary, b[offset:])
+		packet := b[offset:]
+		err := c.WS.Write(c.Ctx, websocket.MessageBinary, packet)
 		if err != nil {
 			return i, wrapEOF(err)
 		}
+		socklog.LogOutgoingPacketOwner(c.Log, "vpn packet send", packet)
 	}
 	return len(bufs), nil
 }

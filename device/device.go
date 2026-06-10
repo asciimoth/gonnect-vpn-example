@@ -12,6 +12,7 @@ import (
 	"github.com/asciimoth/gonnect-netstack/vtun"
 	"github.com/asciimoth/gonnect-vpn-example/cfg"
 	"github.com/asciimoth/gonnect-vpn-example/logger"
+	"github.com/asciimoth/gonnect-vpn-example/socklog"
 	"github.com/asciimoth/gonnect/tun"
 	"github.com/asciimoth/socksgo"
 )
@@ -37,23 +38,60 @@ func IsPrivileged(name string) bool {
 }
 
 func wrap(dev tun.Tun, logger logger.Logger) tun.Tun {
-	return &tun.CallbackTUN{
-		Tun: dev,
-		OnRead: func(n int, err error) {
-			if err != nil {
-				logger.Print("tun read: ", err)
-				return
-			}
-			logger.Print("tun --IP-> transport ", n, " packets")
-		},
-		OnWrite: func(n int, err error) {
-			if err != nil {
-				logger.Print("tun write: ", err)
-				return
-			}
-			logger.Print("tun <-IP-- transport ", n, " packets")
-		},
+	return &loggingTun{
+		Tun:    dev,
+		logger: logger,
 	}
+}
+
+type loggingTun struct {
+	tun.Tun
+	logger logger.Logger
+}
+
+func (t *loggingTun) Read(
+	bufs [][]byte,
+	sizes []int,
+	offset int,
+) (n int, err error) {
+	n, err = t.Tun.Read(bufs, sizes, offset)
+	if err != nil {
+		t.logger.Print("tun read: ", err)
+		return n, err
+	}
+	t.logger.Print("tun --IP-> transport ", n, " packets")
+	for i := range n {
+		if i >= len(bufs) || i >= len(sizes) {
+			break
+		}
+		end := offset + sizes[i]
+		if offset < 0 || end < offset || end > len(bufs[i]) {
+			t.logger.Printf(
+				"tun --IP-> transport packet %d sockowner unavailable: invalid packet bounds offset=%d size=%d len=%d",
+				i+1,
+				offset,
+				sizes[i],
+				len(bufs[i]),
+			)
+			continue
+		}
+		socklog.LogOutgoingPacketOwner(
+			t.logger,
+			fmt.Sprintf("tun --IP-> transport packet %d", i+1),
+			bufs[i][offset:end],
+		)
+	}
+	return n, err
+}
+
+func (t *loggingTun) Write(bufs [][]byte, offset int) (n int, err error) {
+	n, err = t.Tun.Write(bufs, offset)
+	if err != nil {
+		t.logger.Print("tun write: ", err)
+		return n, err
+	}
+	t.logger.Print("tun <-IP-- transport ", n, " packets")
+	return n, err
 }
 
 func TunFromCfg(
@@ -162,6 +200,7 @@ func vtunSocksFromCfg(
 
 			wg.Go(func() {
 				defer func() { _ = conn.Close() }()
+				socklog.LogIncomingConnOwner(logger, "socks connection", conn)
 				logger.Printf("socks connection from %s", conn.RemoteAddr())
 				if err := server.Accept(ctx, conn, false); err != nil {
 					logger.Printf(

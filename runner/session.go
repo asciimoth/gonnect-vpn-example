@@ -109,6 +109,7 @@ func startClient(
 	if err != nil {
 		return fmt.Errorf("failed to connect to %s: %w", cfg.Connect, err)
 	}
+	t.SetLogger(logger)
 	logger.Printf("connected to %s", cfg.Connect)
 
 	p2p := tun.NewP2P(nil)
@@ -142,6 +143,7 @@ func startServer(
 			logger.Println("failed to accept transport conn:", err)
 			return
 		}
+		t.SetLogger(logger)
 		logger.Println("accepted transport conn from:", r.RemoteAddr)
 		p2p.SetA(t)
 	})

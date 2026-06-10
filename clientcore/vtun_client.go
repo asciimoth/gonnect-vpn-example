@@ -72,6 +72,7 @@ func NewVTunClientSession(
 		cancel()
 		return nil, fmt.Errorf("failed to connect to %s: %w", conf.Connect, err)
 	}
+	conn.SetLogger(log)
 
 	dev, err := (&vtun.Opts{
 		LocalAddrs: []netip.Addr{addr},

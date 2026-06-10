@@ -68,6 +68,7 @@ func NewAndroidTunClientSession(
 		_ = dev.Close()
 		return nil, fmt.Errorf("failed to connect to %s: %w", conf.Connect, err)
 	}
+	conn.SetLogger(log)
 
 	p2p := tun.NewP2P(nil)
 	p2p.SetA(conn)
